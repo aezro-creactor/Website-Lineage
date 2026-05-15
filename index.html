@@ -2599,6 +2599,9 @@
       ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg> Create Account'
       : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg> Sign In';
     document.getElementById('auth-error').classList.remove('show');
+    document.getElementById('auth-error').style.background = '';
+    document.getElementById('auth-error').style.borderColor = '';
+    document.getElementById('auth-error').style.color = '';
   }
 
   async function handleAuth() {
@@ -2628,12 +2631,39 @@
       });
       btn.disabled=false; btn.style.opacity='';
       if (error) { errEl.textContent = error.message; errEl.classList.add('show'); return; }
-      // signUp triggers onAuthStateChange → loginSuccess automatically
+
+      // If session exists immediately → email confirmation is OFF, log them in now
+      if (data.session) {
+        const displayName = data.user.user_metadata?.full_name || name;
+        loginSuccess(displayName, email, true);
+      } else {
+        // Email confirmation is ON → tell user to check their inbox
+        errEl.style.background = '#f0fff4';
+        errEl.style.borderColor = '#9ae6b4';
+        errEl.style.color = '#276749';
+        errEl.textContent = '✅ Account created! Please check your email to confirm your account, then sign in.';
+        errEl.classList.add('show');
+        // Switch to sign-in tab so they can log in after confirming
+        setTimeout(() => switchAuthTab('signin'), 2500);
+      }
     } else {
       const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
       btn.disabled=false; btn.style.opacity='';
-      if (error) { errEl.textContent = 'Incorrect email or password.'; errEl.classList.add('show'); return; }
-      // onAuthStateChange → loginSuccess automatically
+      if (error) {
+        if (error.message.toLowerCase().includes('email not confirmed')) {
+          errEl.textContent = 'Please confirm your email first. Check your inbox for a confirmation link.';
+        } else if (error.message.toLowerCase().includes('invalid login')) {
+          errEl.textContent = 'Incorrect email or password.';
+        } else {
+          errEl.textContent = error.message;
+        }
+        errEl.style.background = '';
+        errEl.style.borderColor = '';
+        errEl.style.color = '';
+        errEl.classList.add('show');
+        return;
+      }
+      // onAuthStateChange → loginSuccess automatically on SIGNED_IN
     }
   }
 
