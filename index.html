@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600;700;800&family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root {
     --blue: #004FF9;
@@ -2527,64 +2528,30 @@
 </div>
 
 <script>
+  // ── SUPABASE INIT ──
+  const SUPABASE_URL = 'https://htentdnsnwdkzrrihqvx.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0ZW50ZG5zbndka3pycmlocXZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4MzA4NjAsImV4cCI6MjA5NDQwNjg2MH0.T2Aprtf3MHo-cyoTpJvv6jdbllBreggNIXXcSJ6Huds';
+  const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
   // ── AUTH STATE ──
   let currentUser = null;
 
-  const DEMO_USERS = {
-    'client@lineage.com': { password: 'demo1234', name: 'Juan dela Cruz' },
-    'maria@email.com':    { password: 'pass1234', name: 'Maria Santos' },
-  };
+  // Listen for auth state changes (handles OAuth redirects & session restore)
+  _supabase.auth.onAuthStateChange(async (event, session) => {
+    if (session && session.user) {
+      const user = session.user;
+      const name = user.user_metadata?.full_name || user.user_metadata?.name || user.email.split('@')[0];
+      // Redirect to dashboard on fresh sign-in (including Google OAuth), but not on every page load
+      const shouldRedirect = event === 'SIGNED_IN';
+      loginSuccess(name, user.email, shouldRedirect);
+    } else if (event === 'SIGNED_OUT') {
+      currentUser = null;
+      document.getElementById('nav-login-item').style.display = '';
+      document.getElementById('nav-user-item').style.display = 'none';
+    }
+  });
 
-  const DEMO_PACKAGES = [
-    {
-      id: 'LNE-2025-001', date: 'May 10, 2025', status: 'delivered',
-      pickup: 'Antipolo City, Rizal', dest: 'Makati City, NCR',
-      weight: '2.5 kg', type: 'Documents & Parcels',
-      timeline: [
-        { title: 'Inquiry Submitted', time: 'May 10, 9:00 AM', note: 'Inquiry received and confirmed.', done: true },
-        { title: 'Package Picked Up', time: 'May 10, 11:30 AM', note: 'Package collected from Antipolo.', done: true },
-        { title: 'In Transit', time: 'May 10, 12:15 PM', note: 'En route to destination.', done: true },
-        { title: 'Out for Delivery', time: 'May 10, 2:45 PM', note: 'Driver heading to Makati.', done: true },
-        { title: 'Delivered', time: 'May 10, 3:20 PM', note: 'Delivered and received by recipient.', done: true },
-      ]
-    },
-    {
-      id: 'LNE-2025-002', date: 'May 12, 2025', status: 'in-transit',
-      pickup: 'Marikina City, NCR', dest: 'Pasig City, NCR',
-      weight: '1.2 kg', type: 'E-commerce Package',
-      timeline: [
-        { title: 'Inquiry Submitted', time: 'May 12, 8:00 AM', note: 'Order confirmed.', done: true },
-        { title: 'Package Picked Up', time: 'May 12, 10:00 AM', note: 'Package collected from Marikina.', done: true },
-        { title: 'In Transit', time: 'May 12, 10:45 AM', note: 'Package is on the way.', done: false, active: true },
-        { title: 'Out for Delivery', time: 'Estimated: 1:00 PM', done: false },
-        { title: 'Delivered', time: 'Estimated: 2:00 PM', done: false },
-      ]
-    },
-    {
-      id: 'LNE-2025-003', date: 'May 13, 2025', status: 'pending',
-      pickup: 'Antipolo City, Rizal', dest: 'Quezon City, NCR',
-      weight: '4.0 kg', type: 'Business Documents',
-      timeline: [
-        { title: 'Inquiry Submitted', time: 'May 13, 3:00 PM', note: 'Awaiting confirmation from our team.', done: true },
-        { title: 'Package Picked Up', time: 'Scheduled: May 14, 9:00 AM', done: false, active: true },
-        { title: 'In Transit', time: 'TBD', done: false },
-        { title: 'Out for Delivery', time: 'TBD', done: false },
-        { title: 'Delivered', time: 'TBD', done: false },
-      ]
-    },
-    {
-      id: 'LNE-2025-004', date: 'May 8, 2025', status: 'delivered',
-      pickup: 'Cainta, Rizal', dest: 'Taguig City, NCR',
-      weight: '0.8 kg', type: 'Small Package',
-      timeline: [
-        { title: 'Inquiry Submitted', time: 'May 8, 7:30 AM', done: true },
-        { title: 'Package Picked Up', time: 'May 8, 9:15 AM', done: true },
-        { title: 'In Transit', time: 'May 8, 10:00 AM', done: true },
-        { title: 'Out for Delivery', time: 'May 8, 12:30 PM', done: true },
-        { title: 'Delivered', time: 'May 8, 1:10 PM', note: 'Delivered successfully.', done: true },
-      ]
-    },
-  ];
+
 
   // ── PAGE NAVIGATION ──
   function showPage(page) {
@@ -2634,39 +2601,55 @@
     document.getElementById('auth-error').classList.remove('show');
   }
 
-  function handleAuth() {
+  async function handleAuth() {
     const email = document.getElementById('auth-email').value.trim();
     const password = document.getElementById('auth-password').value;
     const isSignup = document.getElementById('tab-signup').classList.contains('active');
     const errEl = document.getElementById('auth-error');
+    const btn = document.getElementById('auth-submit-btn');
 
     if (!email || !password) { errEl.textContent = 'Please fill in all required fields.'; errEl.classList.add('show'); return; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { errEl.textContent = 'Please enter a valid email address.'; errEl.classList.add('show'); return; }
 
+    btn.disabled = true;
+    btn.style.opacity = '0.7';
+    errEl.classList.remove('show');
+
     if (isSignup) {
       const name = document.getElementById('auth-name').value.trim();
       const confirm = document.getElementById('auth-confirm').value;
-      if (!name) { errEl.textContent = 'Please enter your full name.'; errEl.classList.add('show'); return; }
-      if (password.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; errEl.classList.add('show'); return; }
-      if (password !== confirm) { errEl.textContent = 'Passwords do not match.'; errEl.classList.add('show'); return; }
-      loginSuccess(name, email);
+      if (!name) { errEl.textContent = 'Please enter your full name.'; errEl.classList.add('show'); btn.disabled=false; btn.style.opacity=''; return; }
+      if (password.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; errEl.classList.add('show'); btn.disabled=false; btn.style.opacity=''; return; }
+      if (password !== confirm) { errEl.textContent = 'Passwords do not match.'; errEl.classList.add('show'); btn.disabled=false; btn.style.opacity=''; return; }
+
+      const { data, error } = await _supabase.auth.signUp({
+        email, password,
+        options: { data: { full_name: name } }
+      });
+      btn.disabled=false; btn.style.opacity='';
+      if (error) { errEl.textContent = error.message; errEl.classList.add('show'); return; }
+      // signUp triggers onAuthStateChange → loginSuccess automatically
     } else {
-      const user = DEMO_USERS[email];
-      if (!user || user.password !== password) {
-        errEl.textContent = 'Incorrect email or password. Try: client@lineage.com / demo1234';
-        errEl.classList.add('show'); return;
-      }
-      loginSuccess(user.name, email);
+      const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
+      btn.disabled=false; btn.style.opacity='';
+      if (error) { errEl.textContent = 'Incorrect email or password.'; errEl.classList.add('show'); return; }
+      // onAuthStateChange → loginSuccess automatically
     }
   }
 
-  function loginWithGoogle() {
-    const name = 'Google User';
-    const email = 'google.user@gmail.com';
-    loginSuccess(name, email);
+  async function loginWithGoogle() {
+    const { error } = await _supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.href }
+    });
+    if (error) {
+      const errEl = document.getElementById('auth-error');
+      errEl.textContent = error.message;
+      errEl.classList.add('show');
+    }
   }
 
-  function loginSuccess(name, email) {
+  function loginSuccess(name, email, redirect = true) {
     currentUser = { name, email };
     const initials = name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
     document.getElementById('nav-avatar').textContent = initials;
@@ -2678,11 +2661,12 @@
     document.getElementById('profile-name-display').textContent = name;
     document.getElementById('profile-email-display').textContent = email;
     closeLogin();
-    showPage('dashboard');
+    if (redirect) showPage('dashboard');
     setTimeout(prefillDashInquiryForm, 100);
   }
 
-  function logoutUser() {
+  async function logoutUser() {
+    await _supabase.auth.signOut();
     currentUser = null;
     document.getElementById('nav-login-item').style.display = '';
     document.getElementById('nav-user-item').style.display = 'none';
@@ -2701,63 +2685,119 @@
   });
 
   // ── DASHBOARD ──
-  function renderDashboard() {
-    renderPackageList('recent-list', DEMO_PACKAGES.slice(0,3));
-    renderPackageList('all-packages-list', DEMO_PACKAGES);
+  async function renderDashboard() {
+    if (!currentUser) return;
+    const { data: session } = await _supabase.auth.getSession();
+    if (!session.session) return;
+
+    const { data: inquiries, error } = await _supabase
+      .from('inquiries')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    const packages = inquiries || [];
+
+    // Update stats
+    const total = packages.length;
+    const pending = packages.filter(p => p.status === 'pending').length;
+    const delivered = packages.filter(p => p.status === 'delivered').length;
+    const transit = packages.filter(p => p.status === 'in-transit').length;
+    const statTotal = document.getElementById('stat-total');
+    const statPending = document.getElementById('stat-pending');
+    const statDelivered = document.getElementById('stat-delivered');
+    const statTransit = document.getElementById('stat-transit');
+    if (statTotal) statTotal.textContent = total;
+    if (statPending) statPending.textContent = pending;
+    if (statDelivered) statDelivered.textContent = delivered;
+    if (statTransit) statTransit.textContent = transit;
+
+    renderInquiryList('recent-list', packages.slice(0, 3));
+    renderInquiryList('all-packages-list', packages);
+
+    // Profile stats
+    const profileDelivered = document.getElementById('profile-delivered');
+    const profileActive = document.getElementById('profile-active');
+    if (profileDelivered) profileDelivered.textContent = delivered;
+    if (profileActive) profileActive.textContent = transit;
   }
 
-  function renderPackageList(containerId, packages) {
+  function renderInquiryList(containerId, items) {
     const container = document.getElementById(containerId);
     if (!container) return;
-    if (packages.length === 0) {
-      container.innerHTML = `<div class="empty-state"><div class="empty-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg></div><h3>No packages found</h3><p>Submit an inquiry to get started with your first delivery.</p><a href="#" onclick="showPage('inquiry')" class="btn-primary" style="display:inline-flex;">Make an Inquiry</a></div>`;
+    if (!items || items.length === 0) {
+      container.innerHTML = `<div class="empty-state"><div class="empty-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg></div><h3>No inquiries yet</h3><p>Submit an inquiry to get started with your first delivery.</p><a href="#" onclick="switchDashTab('newinquiry');return false;" class="btn-primary" style="display:inline-flex;">New Inquiry</a></div>`;
       return;
     }
-    container.innerHTML = packages.map((pkg, i) => buildPackageCard(pkg, i, containerId)).join('');
+    container.innerHTML = items.map((inq, i) => buildInquiryCard(inq, i, containerId)).join('');
   }
 
-  function buildPackageCard(pkg, i, prefix) {
-    const statusLabels = { pending:'Pending', confirmed:'Confirmed', 'picked-up':'Picked Up', 'in-transit':'In Transit', 'out-for-delivery':'Out for Delivery', delivered:'Delivered' };
-    const label = statusLabels[pkg.status] || pkg.status;
-    const timeline = pkg.timeline.map(t => {
-      const cls = t.done ? 'done' : (t.active ? 'active' : '');
-      return `<div class="tl-item ${cls}"><div class="tl-dot"></div><div class="tl-title">${t.title}</div><div class="tl-time">${t.time||''}</div>${t.note?`<div class="tl-note">${t.note}</div>`:''}</div>`;
-    }).join('');
-    return `<div class="package-card" id="card-${prefix}-${i}" onclick="toggleCard('${prefix}',${i})">
-      <div class="package-card-top">
-        <div>
-          <div class="package-id">${pkg.id}<span>${pkg.date}</span></div>
-          <div class="package-route" style="margin-top:6px;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-            ${pkg.pickup}
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-            ${pkg.dest}
+  function buildInquiryCard(inq, i, prefix) {
+    const statusLabels = { pending:'Pending', confirmed:'Confirmed', 'in-transit':'In Transit', delivered:'Delivered' };
+    const statusColors = { pending:'#f6ad55', confirmed:'#68d391', 'in-transit':'#63b3ed', delivered:'#68d391' };
+    const label = statusLabels[inq.status] || inq.status;
+    const color = statusColors[inq.status] || '#9aa3be';
+    const date = new Date(inq.created_at).toLocaleDateString('en-PH', { year:'numeric', month:'short', day:'numeric' });
+    const shortId = 'LNE-' + inq.id.slice(0,8).toUpperCase();
+    const distInfo = (inq.straight_line_distance_km != null)
+      ? `<div class="meta-row"><span class="meta-label">Straight-line</span><span class="meta-val">${parseFloat(inq.straight_line_distance_km).toFixed(2)} km</span></div>
+         <div class="meta-row"><span class="meta-label">Est. Road Dist.</span><span class="meta-val">${parseFloat(inq.estimated_road_distance_km).toFixed(2)} km</span></div>` : '';
+    return `<div class="package-card" id="card-${prefix}-${i}">
+      <div class="package-card-header" onclick="toggleCard('${prefix}', ${i})">
+        <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0;">
+          <div style="width:38px;height:38px;border-radius:10px;background:var(--blue-light);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+          </div>
+          <div style="min-width:0;">
+            <div style="font-weight:700;font-family:'Syne',sans-serif;font-size:0.9rem;color:var(--black);">${shortId}</div>
+            <div style="font-size:0.8rem;color:var(--gray-400);font-weight:300;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${inq.pickup_location} → ${inq.destination}</div>
           </div>
         </div>
-        <div style="display:flex;align-items:center;gap:0.75rem;">
-          <div class="status-badge ${pkg.status}"><span class="status-dot"></span>${label}</div>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gray-400)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="chevron-icon" style="transition:transform 0.3s;"><polyline points="6 9 12 15 18 9"/></svg>
+        <div style="display:flex;align-items:center;gap:0.75rem;flex-shrink:0;">
+          <span style="background:${color}22;color:${color};border:1px solid ${color}44;padding:4px 10px;border-radius:100px;font-size:0.75rem;font-weight:700;">${label}</span>
+          <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--gray-400);transition:transform 0.25s;"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
       </div>
       <div class="package-expand" id="expand-${prefix}-${i}">
-        <div class="package-detail">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;padding-top:1rem;">
           <div class="package-meta">
-            <div style="font-size:0.8rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--blue);margin-bottom:0.5rem;">Package Details</div>
-            <div class="meta-row"><span class="meta-label">Tracking ID</span><span class="meta-val">${pkg.id}</span></div>
-            <div class="meta-row"><span class="meta-label">Date</span><span class="meta-val">${pkg.date}</span></div>
-            <div class="meta-row"><span class="meta-label">Pick-up</span><span class="meta-val">${pkg.pickup}</span></div>
-            <div class="meta-row"><span class="meta-label">Destination</span><span class="meta-val">${pkg.dest}</span></div>
-            <div class="meta-row"><span class="meta-label">Weight</span><span class="meta-val">${pkg.weight}</span></div>
-            <div class="meta-row"><span class="meta-label">Type</span><span class="meta-val">${pkg.type}</span></div>
+            <div style="font-size:0.8rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--blue);margin-bottom:0.5rem;">Inquiry Details</div>
+            <div class="meta-row"><span class="meta-label">Ref ID</span><span class="meta-val">${shortId}</span></div>
+            <div class="meta-row"><span class="meta-label">Submitted</span><span class="meta-val">${date}</span></div>
+            <div class="meta-row"><span class="meta-label">Client</span><span class="meta-val">${inq.client_name}</span></div>
+            <div class="meta-row"><span class="meta-label">Contact</span><span class="meta-val">${inq.contact_number}</span></div>
+            <div class="meta-row"><span class="meta-label">Package</span><span class="meta-val">${inq.package_type}</span></div>
+            <div class="meta-row"><span class="meta-label">Qty</span><span class="meta-val">${inq.quantity || 1}</span></div>
+            <div class="meta-row"><span class="meta-label">Pick-up</span><span class="meta-val">${inq.pickup_location}</span></div>
+            <div class="meta-row"><span class="meta-label">Destination</span><span class="meta-val">${inq.destination}</span></div>
+            ${distInfo}
             <div class="meta-row"><span class="meta-label">Status</span><span class="meta-val">${label}</span></div>
+            ${inq.special_notes ? `<div class="meta-row"><span class="meta-label">Notes</span><span class="meta-val">${inq.special_notes}</span></div>` : ''}
           </div>
           <div>
-            <div style="font-size:0.8rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--blue);margin-bottom:1rem;">Delivery Timeline</div>
-            <div class="timeline">${timeline}</div>
+            <div style="font-size:0.8rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--blue);margin-bottom:1rem;">Status</div>
+            <div style="padding:1rem;background:var(--blue-light);border-radius:var(--radius-sm);font-size:0.85rem;color:var(--blue);font-weight:500;">
+              📦 Inquiry submitted. Our team will contact you within 24 hours.
+            </div>
           </div>
         </div>
       </div>
     </div>`;
+  }
+
+  // Keep filterPackages working (now filters real data)
+  let _allInquiries = [];
+  async function filterPackages(filter) {
+    activeFilter = filter;
+    ['all','active','delivered','pending'].forEach(f => {
+      document.getElementById('filter-'+f).classList.toggle('active', f === filter);
+    });
+    const { data: inquiries } = await _supabase.from('inquiries').select('*').order('created_at', { ascending: false });
+    const all = inquiries || [];
+    _allInquiries = all;
+    const filtered = filter === 'all' ? all
+      : filter === 'active' ? all.filter(p => p.status === 'in-transit' || p.status === 'confirmed')
+      : all.filter(p => p.status === filter);
+    renderInquiryList('all-packages-list', filtered);
   }
 
   function toggleCard(prefix, i) {
@@ -2781,16 +2821,6 @@
   }
 
   let activeFilter = 'all';
-  function filterPackages(filter) {
-    activeFilter = filter;
-    ['all','active','delivered','pending'].forEach(f => {
-      document.getElementById('filter-'+f).classList.toggle('active', f === filter);
-    });
-    const filtered = filter === 'all' ? DEMO_PACKAGES
-      : filter === 'active' ? DEMO_PACKAGES.filter(p => p.status === 'in-transit' || p.status === 'out-for-delivery' || p.status === 'picked-up' || p.status === 'confirmed')
-      : DEMO_PACKAGES.filter(p => p.status === filter);
-    renderPackageList('all-packages-list', filtered);
-  }
 
   // ── HAMBURGER ──
   const hamburger = document.getElementById('hamburger');
@@ -2962,7 +2992,7 @@
     if (emailEl && !emailEl.value) emailEl.value = currentUser.email || '';
   }
 
-  document.getElementById('dashInquiryForm').addEventListener('submit', function(e) {
+  document.getElementById('dashInquiryForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     let valid = true;
     function validate(id, errId, check) {
@@ -2980,14 +3010,55 @@
     valid &= validate('d-pkgType', 'd-err-pkgtype', v => v.length > 0);
     valid &= validate('d-pickupText', 'd-err-pickup', v => v.length >= 3);
     valid &= validate('d-destText', 'd-err-dest', v => v.length >= 3);
-    if (valid) {
-      document.getElementById('successOverlay').classList.add('show');
-      document.getElementById('dashInquiryForm').reset();
-      clearDashMapPins();
-      document.getElementById('d-pickup-display').innerHTML = '<strong>📍 Pick-up</strong>Not pinned yet';
-      document.getElementById('d-dest-display').innerHTML = '<strong>🏁 Destination</strong>Not pinned yet';
-      document.getElementById('d-distance-card').style.display = 'none';
+
+    if (!valid) return;
+
+    // Read distance values if pins were set
+    const distKmText = document.getElementById('d-dist-km').textContent;
+    const distRoadText = document.getElementById('d-dist-road').textContent;
+    const straightKm = distKmText && distKmText !== '—' ? parseFloat(distKmText) : null;
+    const roadKm = distRoadText && distRoadText !== '—' ? parseFloat(distRoadText) : null;
+
+    const { data: session } = await _supabase.auth.getSession();
+    if (!session.session) { alert('You must be logged in to submit an inquiry.'); return; }
+
+    const submitBtn = this.querySelector('[type=submit]');
+    submitBtn.disabled = true;
+    submitBtn.style.opacity = '0.7';
+
+    const { error } = await _supabase.from('inquiries').insert({
+      user_id: session.session.user.id,
+      client_name: document.getElementById('d-clientName').value.trim(),
+      contact_number: document.getElementById('d-contactNum').value.trim(),
+      email: document.getElementById('d-emailAddr').value.trim(),
+      package_type: document.getElementById('d-pkgType').value,
+      quantity: parseInt(document.getElementById('d-quantity').value) || 1,
+      special_notes: document.getElementById('d-specialNotes').value.trim() || null,
+      pickup_location: document.getElementById('d-pickupText').value.trim(),
+      destination: document.getElementById('d-destText').value.trim(),
+      preferred_date: document.getElementById('d-pickupDate').value || null,
+      additional_notes: document.getElementById('d-notes').value.trim() || null,
+      straight_line_distance_km: straightKm,
+      estimated_road_distance_km: roadKm,
+      status: 'pending'
+    });
+
+    submitBtn.disabled = false;
+    submitBtn.style.opacity = '';
+
+    if (error) {
+      alert('Error saving inquiry: ' + error.message);
+      return;
     }
+
+    document.getElementById('successOverlay').classList.add('show');
+    document.getElementById('dashInquiryForm').reset();
+    clearDashMapPins();
+    document.getElementById('d-pickup-display').innerHTML = '<strong>📍 Pick-up</strong>Not pinned yet';
+    document.getElementById('d-dest-display').innerHTML = '<strong>🏁 Destination</strong>Not pinned yet';
+    document.getElementById('d-distance-card').style.display = 'none';
+    // Refresh dashboard data
+    await renderDashboard();
   });
 
   document.querySelectorAll('#dashInquiryForm input, #dashInquiryForm textarea, #dashInquiryForm select').forEach(el => {
