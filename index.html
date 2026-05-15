@@ -2627,7 +2627,10 @@
 
       const { data, error } = await _supabase.auth.signUp({
         email, password,
-        options: { data: { full_name: name } }
+        options: {
+          data: { full_name: name },
+          emailRedirectTo: window.location.href.split('#')[0]
+        }
       });
       btn.disabled=false; btn.style.opacity='';
       if (error) { errEl.textContent = error.message; errEl.classList.add('show'); return; }
