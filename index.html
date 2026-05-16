@@ -1512,50 +1512,98 @@
       <div class="logo-mark"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></div>
       Lineage Enterprise
     </div>
-    <h2 id="modal-title">Welcome back</h2>
-    <p id="modal-sub">Sign in to track your deliveries and manage inquiries.</p>
 
-    <div class="modal-tabs">
-      <button class="modal-tab active" id="tab-signin" onclick="switchAuthTab('signin')">Sign In</button>
-      <button class="modal-tab" id="tab-signup" onclick="switchAuthTab('signup')">Create Account</button>
+    <!-- STEP 1: Main auth form -->
+    <div id="auth-step-1">
+      <h2 id="modal-title">Welcome back</h2>
+      <p id="modal-sub">Sign in to track your deliveries and manage inquiries.</p>
+
+      <div class="modal-tabs">
+        <button class="modal-tab active" id="tab-signin" onclick="switchAuthTab('signin')">Sign In</button>
+        <button class="modal-tab" id="tab-signup" onclick="switchAuthTab('signup')">Create Account</button>
+      </div>
+
+      <div class="auth-error" id="auth-error"></div>
+
+      <button class="google-btn" onclick="loginWithGoogle()">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        Continue with Google
+      </button>
+
+      <div class="divider-row"><span>or continue with email</span></div>
+
+      <div id="signup-name-field" style="display:none;">
+        <div class="form-group">
+          <label>Full Name <span class="req">*</span></label>
+          <input type="text" id="auth-name" placeholder="Juan dela Cruz"/>
+        </div>
+      </div>
+
+      <div id="signup-phone-field" style="display:none;">
+        <div class="form-group">
+          <label>Contact Number <span class="req">*</span></label>
+          <input type="tel" id="auth-phone" placeholder="+63 9XX XXX XXXX"/>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Email Address <span class="req">*</span></label>
+        <input type="email" id="auth-email" placeholder="juan@email.com"/>
+      </div>
+      <div class="form-group">
+        <label>Password <span class="req">*</span></label>
+        <input type="password" id="auth-password" placeholder="••••••••"/>
+      </div>
+
+      <div id="signup-confirm-field" style="display:none;">
+        <div class="form-group">
+          <label>Confirm Password <span class="req">*</span></label>
+          <input type="password" id="auth-confirm" placeholder="••••••••"/>
+        </div>
+      </div>
+
+      <button class="form-submit" id="auth-submit-btn" onclick="handleAuth()" style="margin-top:0.5rem;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+        Sign In
+      </button>
     </div>
 
-    <div class="auth-error" id="auth-error"></div>
+    <!-- STEP 2: OTP Verification -->
+    <div id="auth-step-2" style="display:none;">
+      <div style="text-align:center;margin-bottom:1.5rem;">
+        <div style="width:56px;height:56px;background:var(--blue-light);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        </div>
+        <h2 style="font-size:1.3rem;margin-bottom:0.4rem;">Check your email</h2>
+        <p style="font-size:0.88rem;color:var(--gray-600);font-weight:300;">We sent a 6-digit verification code to<br><strong id="otp-email-display" style="color:var(--black);"></strong></p>
+      </div>
 
-    <button class="google-btn" onclick="loginWithGoogle()">
-      <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-      Continue with Google
-    </button>
+      <div class="auth-error" id="otp-error"></div>
 
-    <div class="divider-row"><span>or continue with email</span></div>
-
-    <div id="signup-name-field" style="display:none;">
       <div class="form-group">
-        <label>Full Name <span class="req">*</span></label>
-        <input type="text" id="auth-name" placeholder="Juan dela Cruz"/>
+        <label>Verification Code <span class="req">*</span></label>
+        <input type="text" id="otp-code" placeholder="Enter 6-digit code" maxlength="6"
+          style="text-align:center;font-size:1.4rem;font-family:'Syne',sans-serif;font-weight:700;letter-spacing:0.3em;"
+          oninput="this.value=this.value.replace(/[^0-9]/g,'')"/>
+      </div>
+
+      <button class="form-submit" onclick="verifyOtp()" style="margin-top:0.5rem;" id="otp-verify-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        Verify & Create Account
+      </button>
+
+      <div style="text-align:center;margin-top:1rem;">
+        <button onclick="resendOtp()" id="resend-btn" style="background:none;border:none;color:var(--blue);font-size:0.83rem;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
+          Didn't receive it? Resend code
+        </button>
+      </div>
+      <div style="text-align:center;margin-top:0.5rem;">
+        <button onclick="backToAuth()" style="background:none;border:none;color:var(--gray-400);font-size:0.8rem;cursor:pointer;font-family:'DM Sans',sans-serif;">
+          ← Back
+        </button>
       </div>
     </div>
 
-    <div class="form-group">
-      <label>Email Address <span class="req">*</span></label>
-      <input type="email" id="auth-email" placeholder="juan@email.com"/>
-    </div>
-    <div class="form-group">
-      <label>Password <span class="req">*</span></label>
-      <input type="password" id="auth-password" placeholder="••••••••"/>
-    </div>
-
-    <div id="signup-confirm-field" style="display:none;">
-      <div class="form-group">
-        <label>Confirm Password <span class="req">*</span></label>
-        <input type="password" id="auth-confirm" placeholder="••••••••"/>
-      </div>
-    </div>
-
-    <button class="form-submit" id="auth-submit-btn" onclick="handleAuth()" style="margin-top:0.5rem;">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-      Sign In
-    </button>
   </div>
 </div>
 
@@ -1794,11 +1842,11 @@
           <div style="margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid var(--gray-100);">
             <div class="meta-row" style="margin-bottom:0.5rem;">
               <span class="meta-label">Member since</span>
-              <span class="meta-val">May 2025</span>
+              <span class="meta-val" id="profile-member-since">—</span>
             </div>
             <div class="meta-row">
               <span class="meta-label">Total orders</span>
-              <span class="meta-val" id="profile-orders">4 deliveries</span>
+              <span class="meta-val" id="profile-orders">—</span>
             </div>
           </div>
           <button onclick="logoutUser()" class="btn-secondary" style="margin-top:1.5rem;width:100%;justify-content:center;">
@@ -1827,8 +1875,8 @@
             </div>
           </div>
           <div style="margin-top:1.5rem;padding:1rem;background:var(--blue-light);border-radius:var(--radius-sm);border:1px solid var(--blue-mid);">
-            <p style="font-size:0.82rem;color:var(--blue);font-weight:500;line-height:1.6;">
-              📦 You have <strong>1 active shipment</strong> currently in transit. Click "My Packages" to view the live status.
+            <p style="font-size:0.82rem;color:var(--blue);font-weight:500;line-height:1.6;" id="profile-shipment-msg">
+              📦 Loading your shipment info...
             </p>
           </div>
         </div>
@@ -2541,9 +2589,18 @@
     if (session && session.user) {
       const user = session.user;
       const name = user.user_metadata?.full_name || user.user_metadata?.name || user.email.split('@')[0];
-      // Redirect to dashboard on fresh sign-in (including Google OAuth), but not on every page load
+
+      // Upsert profile for ALL sign-ins (handles Google OAuth which bypasses the DB trigger)
+      if (event === 'SIGNED_IN') {
+        await _supabase.from('profiles').upsert({
+          id: user.id,
+          full_name: name,
+          email: user.email
+        }, { onConflict: 'id' });
+      }
+
       const shouldRedirect = event === 'SIGNED_IN';
-      loginSuccess(name, user.email, shouldRedirect);
+      loginSuccess(name, user.email, user.id, user.created_at, shouldRedirect);
     } else if (event === 'SIGNED_OUT') {
       currentUser = null;
       document.getElementById('nav-login-item').style.display = '';
@@ -2638,7 +2695,7 @@
       // If session exists immediately → email confirmation is OFF, log them in now
       if (data.session) {
         const displayName = data.user.user_metadata?.full_name || name;
-        loginSuccess(displayName, email, true);
+        loginSuccess(displayName, email, data.user.id, data.user.created_at, true);
       } else {
         // Email confirmation is ON → tell user to check their inbox
         errEl.style.background = '#f0fff4';
@@ -2682,8 +2739,8 @@
     }
   }
 
-  function loginSuccess(name, email, redirect = true) {
-    currentUser = { name, email };
+  function loginSuccess(name, email, userId, createdAt, redirect = true) {
+    currentUser = { name, email, userId };
     const initials = name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
     document.getElementById('nav-avatar').textContent = initials;
     document.getElementById('nav-username').textContent = name.split(' ')[0];
@@ -2693,9 +2750,17 @@
     document.getElementById('profile-avatar-big').textContent = initials;
     document.getElementById('profile-name-display').textContent = name;
     document.getElementById('profile-email-display').textContent = email;
+
+    // Member since
+    if (createdAt) {
+      const since = new Date(createdAt).toLocaleDateString('en-PH', { month: 'long', year: 'numeric' });
+      const memberEl = document.getElementById('profile-member-since');
+      if (memberEl) memberEl.textContent = since;
+    }
+
     closeLogin();
     if (redirect) showPage('dashboard');
-    setTimeout(prefillDashInquiryForm, 100);
+    setTimeout(() => { prefillDashInquiryForm(); renderDashboard(); }, 100);
   }
 
   async function logoutUser() {
@@ -2750,8 +2815,24 @@
     // Profile stats
     const profileDelivered = document.getElementById('profile-delivered');
     const profileActive = document.getElementById('profile-active');
+    const profileOrders = document.getElementById('profile-orders');
+    const profileShipmentMsg = document.getElementById('profile-shipment-msg');
+
     if (profileDelivered) profileDelivered.textContent = delivered;
     if (profileActive) profileActive.textContent = transit;
+    if (profileOrders) profileOrders.textContent = total + (total === 1 ? ' delivery' : ' deliveries');
+
+    if (profileShipmentMsg) {
+      if (transit > 0) {
+        profileShipmentMsg.innerHTML = `📦 You have <strong>${transit} active shipment${transit > 1 ? 's' : ''}</strong> currently in transit. Click "My Packages" to view the live status.`;
+      } else if (pending > 0) {
+        profileShipmentMsg.innerHTML = `🕐 You have <strong>${pending} pending inquiry${pending > 1 ? 's' : ''}</strong> awaiting confirmation from our team.`;
+      } else if (delivered > 0) {
+        profileShipmentMsg.innerHTML = `✅ All your deliveries have been completed. Submit a new inquiry anytime!`;
+      } else {
+        profileShipmentMsg.innerHTML = `📋 No deliveries yet. Submit your first inquiry to get started!`;
+      }
+    }
   }
 
   function renderInquiryList(containerId, items) {
