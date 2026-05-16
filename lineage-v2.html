@@ -2604,10 +2604,10 @@
   // ── EMAILJS INIT ──
   // Replace these with your actual EmailJS public key, service ID, and template ID
   // Sign up free at https://www.emailjs.com — takes ~5 minutes
-  const EMAILJS_PUBLIC_KEY   = 'YOUR_EMAILJS_PUBLIC_KEY';   // e.g. 'abc123XYZ'
-  const EMAILJS_SERVICE_ID   = 'YOUR_EMAILJS_SERVICE_ID';   // e.g. 'service_xxxxxx'
-  const EMAILJS_TEMPLATE_ID  = 'YOUR_EMAILJS_TEMPLATE_ID';  // e.g. 'template_xxxxxx'
-  if (EMAILJS_PUBLIC_KEY !== 'YOUR_EMAILJS_PUBLIC_KEY') {
+  const EMAILJS_PUBLIC_KEY   = 'ppR8RtgqYT9hiHCdP';
+  const EMAILJS_SERVICE_ID   = 'service_n697sfp';
+  const EMAILJS_TEMPLATE_ID  = 'template_4sj9sih'; // e.g. 'template_xxxxxx'
+  if (EMAILJS_PUBLIC_KEY !== 'ppR8RtgqYT9hiHCdP') {
     emailjs.init(EMAILJS_PUBLIC_KEY);
   }
 
@@ -2679,29 +2679,57 @@
 
     // Only act on SIGNED_IN (fresh login/OAuth) and INITIAL_SESSION (page reload with existing session)
     // Ignore TOKEN_REFRESHED, USER_UPDATED, etc. to prevent unwanted redirects
-    if (event !== 'SIGNED_IN' && event !== 'INITIAL_SESSION') return;
+   if (
+    event !== 'SIGNED_IN' &&
+    event !== 'INITIAL_SESSION' &&
+    event !== 'SIGNED_OUT'
+  ) return;
 
-    if (session && session.user) {
-      const user = session.user;
-      const name = user.user_metadata?.full_name || user.user_metadata?.name || user.email.split('@')[0];
+   if (event === 'SIGNED_OUT') {
+  currentUser = null;
 
-      // Upsert profile for fresh sign-ins only
-      if (event === 'SIGNED_IN') {
-        await _supabase.from('profiles').upsert({
-          id: user.id,
-          full_name: name,
-          email: user.email
-        }, { onConflict: 'id' });
-      }
+  document.getElementById('nav-login-item').style.display = '';
+  document.getElementById('nav-user-item').style.display = 'none';
 
-      // Only redirect to dashboard on a true fresh SIGNED_IN, not on page reload session restore
-      const shouldRedirect = event === 'SIGNED_IN';
-      _authInitialized = true;
-      loginSuccess(name, user.email, user.id, user.created_at, shouldRedirect);
-    } else {
-      // INITIAL_SESSION with no session = not logged in
-      _authInitialized = true;
-    }
+  const nameEl = document.getElementById('d-clientName');
+  const emailEl = document.getElementById('d-emailAddr');
+
+  if (nameEl) nameEl.value = '';
+  if (emailEl) emailEl.value = '';
+
+  showPage('home');
+  return;
+}
+
+if (session && session.user) {
+  const user = session.user;
+
+  const name =
+    user.user_metadata?.full_name ||
+    user.user_metadata?.name ||
+    user.email.split('@')[0];
+
+  if (event === 'SIGNED_IN') {
+    await _supabase.from('profiles').upsert(
+      {
+        id: user.id,
+        full_name: name,
+        email: user.email
+      },
+      { onConflict: 'id' }
+    );
+  }
+
+  loginSuccess(
+    name,
+    user.email,
+    user.id,
+    user.created_at,
+    event === 'SIGNED_IN'
+  );
+
+  _authInitialized = true;
+}
   });
 
 
@@ -2749,6 +2777,7 @@
     document.getElementById('tab-signin').classList.toggle('active', !isSignup);
     document.getElementById('tab-signup').classList.toggle('active', isSignup);
     document.getElementById('signup-name-field').style.display = isSignup ? 'block' : 'none';
+    document.getElementById('signup-phone-field').style.display = isSignup ? 'block' : 'none';
     document.getElementById('signup-confirm-field').style.display = isSignup ? 'block' : 'none';
     document.getElementById('modal-title').textContent = isSignup ? 'Create your account' : 'Welcome back';
     document.getElementById('modal-sub').textContent = isSignup ? 'Join Lineage Enterprise to track your deliveries.' : 'Sign in to track your deliveries and manage inquiries.';
@@ -2871,12 +2900,29 @@
     setTimeout(() => { forcePrefillDashInquiryForm(); renderDashboard(); }, 100);
   }
 
-  async function logoutUser() {
+ async function logoutUser() {
+  try {
     document.getElementById('user-dropdown').classList.remove('open');
-    // Let onAuthStateChange(SIGNED_OUT) handle UI cleanup
+
+    const { error } = await _supabase.auth.signOut();
+
+    if (error) {
+      console.error('Logout error:', error.message);
+      return;
+    }
+
+    // Manual cleanup
+    currentUser = null;
+
+    document.getElementById('nav-login-item').style.display = '';
+    document.getElementById('nav-user-item').style.display = 'none';
+
     showPage('home');
-    await _supabase.auth.signOut();
+
+  } catch (err) {
+    console.error('Unexpected logout error:', err);
   }
+}
 
   function toggleUserMenu() {
     document.getElementById('user-dropdown').classList.toggle('open');
