@@ -2604,10 +2604,10 @@
   // ── EMAILJS INIT ──
   // Replace these with your actual EmailJS public key, service ID, and template ID
   // Sign up free at https://www.emailjs.com — takes ~5 minutes
-  const EMAILJS_PUBLIC_KEY   = 'ppR8RtgqYT9hiHCdP';   // e.g. 'abc123XYZ'
-  const EMAILJS_SERVICE_ID   = 'service_n697sfp';   // e.g. 'service_xxxxxx'
-  const EMAILJS_TEMPLATE_ID  = 'template_4sj9sih';  // e.g. 'template_xxxxxx'
-  if (EMAILJS_PUBLIC_KEY !== 'ppR8RtgqYT9hiHCdP') {
+  const EMAILJS_PUBLIC_KEY   = 'YOUR_EMAILJS_PUBLIC_KEY';   // e.g. 'abc123XYZ'
+  const EMAILJS_SERVICE_ID   = 'YOUR_EMAILJS_SERVICE_ID';   // e.g. 'service_xxxxxx'
+  const EMAILJS_TEMPLATE_ID  = 'YOUR_EMAILJS_TEMPLATE_ID';  // e.g. 'template_xxxxxx'
+  if (EMAILJS_PUBLIC_KEY !== 'YOUR_EMAILJS_PUBLIC_KEY') {
     emailjs.init(EMAILJS_PUBLIC_KEY);
   }
 
@@ -2629,41 +2629,63 @@
 
   // ── CONFIRMATION EMAIL ──
   async function sendConfirmationEmail(toEmail, toName, inquiryDetails) {
-    // Guard: only attempt if EmailJS is configured
     if (EMAILJS_PUBLIC_KEY === 'YOUR_EMAILJS_PUBLIC_KEY') {
-      console.info('[Lineage] EmailJS not configured — skipping confirmation email. Set EMAILJS_PUBLIC_KEY, SERVICE_ID, TEMPLATE_ID to enable.');
+      console.info('[Lineage] EmailJS not configured — skipping confirmation email.');
       return;
     }
     try {
-      await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-        to_name:       toName,
-        to_email:      toEmail,
-        ref_id:        inquiryDetails.refId,
-        package_type:  inquiryDetails.packageType,
-        quantity:      inquiryDetails.quantity,
-        pickup:        inquiryDetails.pickup,
-        destination:   inquiryDetails.destination,
+      const result = await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+        // These names must match your EmailJS template variables exactly
+        to_name:        toName,
+        to_email:       toEmail,
+        from_name:      'Lineage Enterprise',
+        reply_to:       'info@lineageenterprise.com',
+        ref_id:         inquiryDetails.refId,
+        package_type:   inquiryDetails.packageType,
+        quantity:       inquiryDetails.quantity,
+        pickup:         inquiryDetails.pickup,
+        destination:    inquiryDetails.destination,
         preferred_date: inquiryDetails.preferredDate || 'Not specified',
-        special_notes: inquiryDetails.specialNotes || 'None',
-        submit_date:   new Date().toLocaleDateString('en-PH', { year:'numeric', month:'long', day:'numeric' })
+        special_notes:  inquiryDetails.specialNotes || 'None',
+        submit_date:    new Date().toLocaleDateString('en-PH', { year:'numeric', month:'long', day:'numeric' })
       });
-      console.info('[Lineage] Confirmation email sent to', toEmail);
+      console.info('[Lineage] Confirmation email sent:', result.status, result.text);
     } catch (err) {
-      // Non-critical — don't block the user flow
-      console.warn('[Lineage] Could not send confirmation email:', err);
+      console.error('[Lineage] EmailJS error — status:', err.status, '| text:', err.text, '| full:', err);
     }
   }
 
   // ── AUTH STATE ──
   let currentUser = null;
 
+  // Track whether this is the very first auth event on page load
+  let _authInitialized = false;
+
   // Listen for auth state changes (handles OAuth redirects & session restore)
   _supabase.auth.onAuthStateChange(async (event, session) => {
+
+    // SIGNED_OUT — always handle immediately
+    if (event === 'SIGNED_OUT') {
+      currentUser = null;
+      _authInitialized = true;
+      document.getElementById('nav-login-item').style.display = '';
+      document.getElementById('nav-user-item').style.display = 'none';
+      const nameEl = document.getElementById('d-clientName');
+      const emailEl = document.getElementById('d-emailAddr');
+      if (nameEl) nameEl.value = '';
+      if (emailEl) emailEl.value = '';
+      return;
+    }
+
+    // Only act on SIGNED_IN (fresh login/OAuth) and INITIAL_SESSION (page reload with existing session)
+    // Ignore TOKEN_REFRESHED, USER_UPDATED, etc. to prevent unwanted redirects
+    if (event !== 'SIGNED_IN' && event !== 'INITIAL_SESSION') return;
+
     if (session && session.user) {
       const user = session.user;
       const name = user.user_metadata?.full_name || user.user_metadata?.name || user.email.split('@')[0];
 
-      // Upsert profile for ALL sign-ins (handles Google OAuth which bypasses the DB trigger)
+      // Upsert profile for fresh sign-ins only
       if (event === 'SIGNED_IN') {
         await _supabase.from('profiles').upsert({
           id: user.id,
@@ -2672,17 +2694,13 @@
         }, { onConflict: 'id' });
       }
 
+      // Only redirect to dashboard on a true fresh SIGNED_IN, not on page reload session restore
       const shouldRedirect = event === 'SIGNED_IN';
+      _authInitialized = true;
       loginSuccess(name, user.email, user.id, user.created_at, shouldRedirect);
-    } else if (event === 'SIGNED_OUT') {
-      currentUser = null;
-      document.getElementById('nav-login-item').style.display = '';
-      document.getElementById('nav-user-item').style.display = 'none';
-      // Clear form fields so the next user doesn't see stale data
-      const nameEl = document.getElementById('d-clientName');
-      const emailEl = document.getElementById('d-emailAddr');
-      if (nameEl) nameEl.value = '';
-      if (emailEl) emailEl.value = '';
+    } else {
+      // INITIAL_SESSION with no session = not logged in
+      _authInitialized = true;
     }
   });
 
@@ -2854,12 +2872,10 @@
   }
 
   async function logoutUser() {
-    await _supabase.auth.signOut();
-    currentUser = null;
-    document.getElementById('nav-login-item').style.display = '';
-    document.getElementById('nav-user-item').style.display = 'none';
     document.getElementById('user-dropdown').classList.remove('open');
+    // Let onAuthStateChange(SIGNED_OUT) handle UI cleanup
     showPage('home');
+    await _supabase.auth.signOut();
   }
 
   function toggleUserMenu() {
