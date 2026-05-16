@@ -1,0 +1,1635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lineage Enterprise – Modern Delivery Solutions</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  :root {
+    --brand: #004FF9;
+    --brand-dark: #0038C0;
+    --brand-light: #e8efff;
+    --brand-glow: rgba(0,79,249,0.18);
+    --white: #ffffff;
+    --surface: #f5f7ff;
+    --surface2: #eef2ff;
+    --text: #0d1630;
+    --text-muted: #6b7a99;
+    --border: #dde3f5;
+    --success: #00c47a;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --radius: 16px;
+    --radius-sm: 10px;
+    --shadow: 0 4px 24px rgba(0,79,249,0.10);
+    --shadow-lg: 0 12px 48px rgba(0,79,249,0.15);
+    --font: 'Sora', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+    --sidebar-w: 260px;
+    --transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--font-body);background:var(--white);color:var(--text);overflow-x:hidden;line-height:1.6}
+  img{max-width:100%}
+  a{text-decoration:none;color:inherit}
+  button{cursor:pointer;font-family:var(--font-body);border:none;outline:none}
+  input,textarea,select{font-family:var(--font-body);outline:none}
+
+  /* ── UTILITY ───────────────────────────── */
+  .hidden{display:none!important}
+  .brand{color:var(--brand)}
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:12px 26px;border-radius:50px;font-weight:600;font-size:0.95rem;transition:var(--transition);cursor:pointer;letter-spacing:-.01em}
+  .btn-primary{background:var(--brand);color:#fff;box-shadow:0 4px 20px var(--brand-glow)}
+  .btn-primary:hover{background:var(--brand-dark);transform:translateY(-2px);box-shadow:0 8px 28px var(--brand-glow)}
+  .btn-outline{background:transparent;color:var(--brand);border:2px solid var(--brand)}
+  .btn-outline:hover{background:var(--brand);color:#fff;transform:translateY(-2px)}
+  .btn-sm{padding:8px 18px;font-size:0.85rem}
+  .btn-ghost{background:transparent;color:var(--text-muted);border:1.5px solid var(--border)}
+  .btn-ghost:hover{border-color:var(--brand);color:var(--brand)}
+  .card{background:#fff;border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow);padding:24px}
+  .badge{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:50px;font-size:0.75rem;font-weight:600;letter-spacing:.02em}
+  .badge-pending{background:#fff3cd;color:#856404}
+  .badge-transit{background:#cff4fc;color:#055160}
+  .badge-pickup{background:#d1ecf1;color:#0c5460}
+  .badge-delivered{background:#d1fae5;color:#065f46}
+  .section-tag{display:inline-block;background:var(--brand-light);color:var(--brand);font-family:var(--font);font-size:.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:6px 16px;border-radius:50px;margin-bottom:16px}
+  .section-title{font-family:var(--font);font-size:clamp(2rem,4vw,3rem);font-weight:800;line-height:1.15;letter-spacing:-.03em;margin-bottom:16px}
+  .section-sub{font-size:1.05rem;color:var(--text-muted);max-width:560px;line-height:1.7}
+  .page{display:none;min-height:100vh}
+  .page.active{display:block}
+
+  /* ── TOAST ─────────────────────────────── */
+  #toast-container{position:fixed;top:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:10px}
+  .toast{background:#fff;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.14);padding:14px 20px;display:flex;align-items:center;gap:12px;min-width:280px;font-size:.9rem;font-weight:500;animation:slideIn .3s ease;border-left:4px solid var(--brand)}
+  .toast.success{border-color:var(--success)}
+  .toast.error{border-color:var(--danger)}
+  .toast-icon{width:20px;height:20px;flex-shrink:0}
+  @keyframes slideIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:none}}
+
+  /* ══════════════════════════════════════════
+     PUBLIC PAGES
+  ══════════════════════════════════════════ */
+
+  /* ── NAVBAR ────────────────────────────── */
+  .navbar{position:sticky;top:0;z-index:500;background:rgba(255,255,255,.88);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-bottom:1px solid var(--border);padding:0 5%;height:70px;display:flex;align-items:center;justify-content:space-between;gap:24px}
+  .nav-logo{display:flex;align-items:center;gap:10px;font-family:var(--font);font-weight:800;font-size:1.25rem;letter-spacing:-.03em}
+  .nav-logo-icon{width:36px;height:36px;background:var(--brand);border-radius:10px;display:grid;place-items:center}
+  .nav-logo-icon svg{width:20px;height:20px;fill:#fff}
+  .nav-links{display:flex;align-items:center;gap:6px;list-style:none}
+  .nav-links a{padding:8px 14px;border-radius:8px;font-size:.9rem;font-weight:500;color:var(--text-muted);transition:var(--transition)}
+  .nav-links a:hover,.nav-links a.active{background:var(--brand-light);color:var(--brand)}
+  .nav-cta{display:flex;gap:10px;align-items:center}
+  .hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:6px}
+  .hamburger span{display:block;width:24px;height:2.5px;background:var(--text);border-radius:2px;transition:var(--transition)}
+  .mobile-nav{display:none;flex-direction:column;position:fixed;inset:70px 0 0 0;background:#fff;z-index:499;padding:24px 5%;gap:8px;overflow-y:auto}
+  .mobile-nav.open{display:flex}
+  .mobile-nav a{padding:14px;border-radius:10px;font-weight:500;font-size:1rem;border-bottom:1px solid var(--border)}
+  .mobile-nav a:hover{background:var(--brand-light);color:var(--brand)}
+
+  /* ── HERO ───────────────────────────────── */
+  .hero{min-height:calc(100vh - 70px);display:flex;align-items:center;padding:60px 5%;position:relative;overflow:hidden;background:linear-gradient(135deg,#f5f7ff 0%,#ffffff 60%,#e8efff 100%)}
+  .hero-bg{position:absolute;inset:0;z-index:0;pointer-events:none}
+  .hero-orb{position:absolute;border-radius:50%;filter:blur(80px);opacity:.35}
+  .hero-orb-1{width:500px;height:500px;background:radial-gradient(circle,#004FF9,transparent 70%);top:-100px;right:-80px}
+  .hero-orb-2{width:300px;height:300px;background:radial-gradient(circle,#a5c0ff,transparent 70%);bottom:-60px;left:10%}
+  .hero-grid{position:absolute;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:60px 60px;opacity:.4}
+  .hero-content{position:relative;z-index:1;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;max-width:1200px;margin:0 auto;width:100%}
+  .hero-text{animation:fadeUp .7s ease both}
+  .hero-eyebrow{display:inline-flex;align-items:center;gap:8px;background:var(--brand-light);color:var(--brand);border-radius:50px;padding:6px 16px;font-size:.8rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:24px}
+  .hero-eyebrow-dot{width:8px;height:8px;background:var(--brand);border-radius:50%;animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(1.3)}}
+  .hero-h1{font-family:var(--font);font-size:clamp(2.5rem,5vw,4rem);font-weight:800;line-height:1.1;letter-spacing:-.04em;margin-bottom:20px}
+  .hero-h1 span{color:var(--brand);position:relative}
+  .hero-h1 span::after{content:'';position:absolute;bottom:-4px;left:0;right:0;height:3px;background:var(--brand);border-radius:2px;opacity:.4}
+  .hero-p{font-size:1.1rem;color:var(--text-muted);line-height:1.75;margin-bottom:36px;max-width:480px}
+  .hero-btns{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:48px}
+  .hero-stats{display:flex;gap:32px;flex-wrap:wrap}
+  .hero-stat{text-align:left}
+  .hero-stat-num{font-family:var(--font);font-size:1.8rem;font-weight:800;color:var(--brand);line-height:1}
+  .hero-stat-label{font-size:.8rem;color:var(--text-muted);margin-top:4px}
+  .hero-visual{animation:fadeUp .7s .15s ease both;position:relative}
+  .hero-phone-wrap{position:relative;display:flex;justify-content:center}
+  .hero-track-card{background:#fff;border-radius:20px;box-shadow:var(--shadow-lg);padding:28px;width:100%;max-width:380px;border:1px solid var(--border)}
+  .htc-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
+  .htc-title{font-family:var(--font);font-weight:700;font-size:1rem}
+  .htc-live{display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--success);font-weight:600}
+  .htc-live-dot{width:7px;height:7px;background:var(--success);border-radius:50%;animation:pulse 1.5s infinite}
+  .htc-track-num{font-family:var(--font);font-size:.85rem;color:var(--text-muted);margin-bottom:18px;font-weight:500}
+  .htc-steps{display:flex;flex-direction:column;gap:0}
+  .htc-step{display:flex;align-items:flex-start;gap:14px;position:relative}
+  .htc-step:not(:last-child)::before{content:'';position:absolute;left:13px;top:28px;bottom:-8px;width:2px;background:var(--border)}
+  .htc-step.done::before{background:var(--brand)}
+  .htc-dot{width:26px;height:26px;border-radius:50%;border:2.5px solid var(--border);background:#fff;display:grid;place-items:center;flex-shrink:0;margin-top:2px;transition:var(--transition)}
+  .htc-step.done .htc-dot{border-color:var(--brand);background:var(--brand)}
+  .htc-step.done .htc-dot svg{fill:#fff}
+  .htc-step-info{padding-bottom:18px}
+  .htc-step-label{font-weight:600;font-size:.88rem}
+  .htc-step-time{font-size:.75rem;color:var(--text-muted);margin-top:2px}
+  .htc-step svg{width:13px;height:13px;fill:var(--border)}
+  .floating-badge{position:absolute;background:#fff;border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.12);padding:10px 16px;display:flex;align-items:center;gap:8px;font-size:.8rem;font-weight:600;animation:float 4s ease-in-out infinite}
+  .floating-badge-1{top:-20px;right:-20px;animation-delay:0s}
+  .floating-badge-2{bottom:-10px;left:-20px;animation-delay:2s}
+  .fb-icon{width:30px;height:30px;border-radius:8px;display:grid;place-items:center}
+  .fb-icon-green{background:#d1fae5}
+  .fb-icon-blue{background:var(--brand-light)}
+  @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:none}}
+
+  /* ── SERVICES SECTION ───────────────────── */
+  .services-section{padding:100px 5%;background:#fff}
+  .services-inner{max-width:1200px;margin:0 auto}
+  .services-header{text-align:center;margin-bottom:60px}
+  .services-header .section-sub{margin:0 auto}
+  .services-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:24px}
+  .service-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:32px;transition:var(--transition);position:relative;overflow:hidden}
+  .service-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--brand) 0%,var(--brand-dark) 100%);opacity:0;transition:var(--transition)}
+  .service-card:hover{transform:translateY(-6px);box-shadow:var(--shadow-lg);border-color:var(--brand)}
+  .service-card:hover::before{opacity:1}
+  .service-card>*{position:relative;z-index:1}
+  .service-card:hover .service-icon{background:rgba(255,255,255,.2)}
+  .service-card:hover .service-title,.service-card:hover .service-desc{color:#fff}
+  .service-icon{width:54px;height:54px;background:var(--brand-light);border-radius:14px;display:grid;place-items:center;margin-bottom:20px;transition:var(--transition)}
+  .service-icon svg{width:26px;height:26px;fill:var(--brand);transition:var(--transition)}
+  .service-card:hover .service-icon svg{fill:#fff}
+  .service-title{font-family:var(--font);font-weight:700;font-size:1.1rem;margin-bottom:10px;transition:var(--transition)}
+  .service-desc{font-size:.9rem;color:var(--text-muted);line-height:1.65;transition:var(--transition)}
+
+  /* ── ABOUT SECTION ──────────────────────── */
+  .about-section{padding:100px 5%;background:var(--surface)}
+  .about-inner{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:70px;align-items:center}
+  .about-visual{position:relative}
+  .about-img-wrap{background:var(--brand);border-radius:24px;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+  .about-img-pattern{position:absolute;inset:0;opacity:.12;background-image:repeating-linear-gradient(45deg,#fff 0,#fff 1px,transparent 0,transparent 50%);background-size:20px 20px}
+  .about-img-icon{width:120px;height:120px;background:rgba(255,255,255,.15);border-radius:30px;display:grid;place-items:center}
+  .about-img-icon svg{width:60px;height:60px;fill:#fff}
+  .about-badge-float{position:absolute;bottom:-20px;right:-20px;background:#fff;border-radius:14px;box-shadow:var(--shadow-lg);padding:16px 20px}
+  .about-badge-float-num{font-family:var(--font);font-size:1.8rem;font-weight:800;color:var(--brand);line-height:1}
+  .about-badge-float-label{font-size:.8rem;color:var(--text-muted);margin-top:2px}
+  .about-mv{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:28px}
+  .mv-card{background:#fff;border-radius:var(--radius-sm);padding:20px;border:1px solid var(--border)}
+  .mv-card-tag{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--brand);margin-bottom:8px}
+  .mv-card-text{font-size:.88rem;color:var(--text-muted);line-height:1.65}
+
+  /* ── CTA BANNER ─────────────────────────── */
+  .cta-section{padding:80px 5%;background:linear-gradient(135deg,var(--brand) 0%,var(--brand-dark) 100%);position:relative;overflow:hidden}
+  .cta-section::before{content:'';position:absolute;inset:0;background-image:radial-gradient(circle at 80% 50%,rgba(255,255,255,.08) 0%,transparent 60%)}
+  .cta-inner{max-width:800px;margin:0 auto;text-align:center;position:relative;z-index:1}
+  .cta-title{font-family:var(--font);font-size:clamp(1.8rem,4vw,2.8rem);font-weight:800;color:#fff;margin-bottom:16px;letter-spacing:-.03em}
+  .cta-sub{color:rgba(255,255,255,.75);font-size:1rem;margin-bottom:36px;line-height:1.7}
+  .cta-btns{display:flex;justify-content:center;gap:14px;flex-wrap:wrap}
+  .btn-white{background:#fff;color:var(--brand);font-weight:700}
+  .btn-white:hover{background:var(--brand-light);transform:translateY(-2px)}
+  .btn-outline-white{background:transparent;color:#fff;border:2px solid rgba(255,255,255,.5)}
+  .btn-outline-white:hover{background:rgba(255,255,255,.15);border-color:#fff}
+
+  /* ── FOOTER ─────────────────────────────── */
+  footer{background:var(--text);color:rgba(255,255,255,.7);padding:60px 5% 30px}
+  .footer-inner{max-width:1200px;margin:0 auto}
+  .footer-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px;margin-bottom:50px}
+  .footer-brand{font-family:var(--font);font-weight:800;font-size:1.2rem;color:#fff;display:flex;align-items:center;gap:10px;margin-bottom:16px}
+  .footer-brand-icon{width:32px;height:32px;background:var(--brand);border-radius:8px;display:grid;place-items:center}
+  .footer-brand-icon svg{width:18px;height:18px;fill:#fff}
+  .footer-desc{font-size:.88rem;line-height:1.75;margin-bottom:20px}
+  .footer-contact-item{display:flex;align-items:center;gap:8px;font-size:.85rem;margin-bottom:8px}
+  .footer-h{font-family:var(--font);font-weight:700;color:#fff;font-size:.9rem;margin-bottom:16px}
+  .footer-links{display:flex;flex-direction:column;gap:10px}
+  .footer-links a{font-size:.85rem;transition:var(--transition)}
+  .footer-links a:hover{color:#fff}
+  .footer-bottom{border-top:1px solid rgba(255,255,255,.1);padding-top:24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:gap;font-size:.82rem;gap:12px;flex-wrap:wrap}
+
+  /* ══════════════════════════════════════════
+     AUTH PAGES
+  ══════════════════════════════════════════ */
+  .auth-page{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#f0f4ff 0%,#ffffff 60%);padding:24px;position:relative;overflow:hidden}
+  .auth-bg-orb{position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none}
+  .auth-bg-orb-1{width:400px;height:400px;background:radial-gradient(circle,rgba(0,79,249,.15),transparent);top:-100px;right:-100px}
+  .auth-bg-orb-2{width:300px;height:300px;background:radial-gradient(circle,rgba(165,192,255,.2),transparent);bottom:-80px;left:-80px}
+  .auth-card{background:#fff;border-radius:24px;box-shadow:var(--shadow-lg);padding:44px 40px;width:100%;max-width:460px;position:relative;z-index:1;animation:fadeUp .5s ease both;border:1px solid var(--border)}
+  .auth-logo{display:flex;align-items:center;gap:10px;font-family:var(--font);font-weight:800;font-size:1.2rem;margin-bottom:32px}
+  .auth-logo-icon{width:38px;height:38px;background:var(--brand);border-radius:10px;display:grid;place-items:center}
+  .auth-logo-icon svg{width:20px;height:20px;fill:#fff}
+  .auth-title{font-family:var(--font);font-size:1.7rem;font-weight:800;letter-spacing:-.03em;margin-bottom:6px}
+  .auth-sub{font-size:.9rem;color:var(--text-muted);margin-bottom:30px}
+  .form-group{margin-bottom:18px}
+  .form-label{display:block;font-weight:600;font-size:.85rem;margin-bottom:7px;color:var(--text)}
+  .form-input{width:100%;padding:12px 16px;border:1.5px solid var(--border);border-radius:10px;font-size:.9rem;transition:var(--transition);background:#fafbff;color:var(--text)}
+  .form-input:focus{border-color:var(--brand);background:#fff;box-shadow:0 0 0 3px var(--brand-glow)}
+  .form-input.error{border-color:var(--danger)}
+  .form-error{font-size:.78rem;color:var(--danger);margin-top:5px;display:none}
+  .form-error.show{display:block}
+  .form-select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%236b7a99' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;background-size:20px;padding-right:40px}
+  .auth-footer-text{text-align:center;font-size:.88rem;color:var(--text-muted);margin-top:20px}
+  .auth-footer-text a{color:var(--brand);font-weight:600}
+  .auth-divider{display:flex;align-items:center;gap:14px;margin:20px 0;color:var(--text-muted);font-size:.83rem}
+  .auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+  .driver-badge{background:linear-gradient(135deg,#fff7e6,#fff3cd);border:1.5px solid #f59e0b;border-radius:10px;padding:12px 16px;font-size:.83rem;color:#856404;margin-bottom:20px;display:flex;align-items:center;gap:8px}
+
+  /* ══════════════════════════════════════════
+     DASHBOARD LAYOUT
+  ══════════════════════════════════════════ */
+  .dash-layout{display:flex;min-height:100vh;background:var(--surface)}
+  .sidebar{width:var(--sidebar-w);background:#fff;border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:300;transition:var(--transition);overflow-y:auto}
+  .sidebar-header{padding:22px 20px 18px;border-bottom:1px solid var(--border)}
+  .sidebar-logo{display:flex;align-items:center;gap:10px;font-family:var(--font);font-weight:800;font-size:1.1rem}
+  .sidebar-logo-icon{width:34px;height:34px;background:var(--brand);border-radius:9px;display:grid;place-items:center;flex-shrink:0}
+  .sidebar-logo-icon svg{width:18px;height:18px;fill:#fff}
+  .sidebar-user{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
+  .sidebar-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--brand),var(--brand-dark));display:grid;place-items:center;color:#fff;font-family:var(--font);font-weight:700;font-size:.95rem;flex-shrink:0}
+  .sidebar-user-info{min-width:0}
+  .sidebar-user-name{font-weight:600;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sidebar-user-role{font-size:.75rem;color:var(--text-muted)}
+  .sidebar-nav{padding:16px 12px;flex:1}
+  .sidebar-section-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-muted);padding:8px 8px 6px;margin-bottom:4px}
+  .sidebar-link{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:10px;font-size:.88rem;font-weight:500;color:var(--text-muted);transition:var(--transition);cursor:pointer;margin-bottom:2px}
+  .sidebar-link:hover{background:var(--brand-light);color:var(--brand)}
+  .sidebar-link.active{background:var(--brand);color:#fff;font-weight:600}
+  .sidebar-link svg{width:18px;height:18px;fill:currentColor;flex-shrink:0}
+  .sidebar-footer{padding:16px 20px;border-top:1px solid var(--border)}
+  .dash-main{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;min-height:100vh}
+  .dash-topbar{background:#fff;border-bottom:1px solid var(--border);padding:0 32px;height:64px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200}
+  .dash-topbar-title{font-family:var(--font);font-weight:700;font-size:1.1rem}
+  .dash-topbar-right{display:flex;align-items:center;gap:14px}
+  .notif-btn{width:38px;height:38px;border-radius:10px;background:var(--surface);display:grid;place-items:center;cursor:pointer;transition:var(--transition);position:relative}
+  .notif-btn:hover{background:var(--brand-light)}
+  .notif-btn svg{width:18px;height:18px;fill:var(--text-muted)}
+  .notif-dot{position:absolute;top:7px;right:7px;width:7px;height:7px;background:var(--danger);border-radius:50%;border:2px solid #fff}
+  .dash-body{padding:28px 32px;flex:1}
+  .dash-section{display:none}
+  .dash-section.active{display:block}
+  .sidebar-toggle-btn{display:none;width:38px;height:38px;border-radius:10px;background:var(--surface);border:1.5px solid var(--border);place-items:center;cursor:pointer}
+  .sidebar-toggle-btn svg{width:18px;height:18px;fill:var(--text)}
+
+  /* ── DASHBOARD HOME ─────────────────────── */
+  .dash-welcome{background:linear-gradient(135deg,var(--brand) 0%,var(--brand-dark) 100%);border-radius:var(--radius);padding:28px 32px;color:#fff;margin-bottom:24px;position:relative;overflow:hidden}
+  .dash-welcome::after{content:'';position:absolute;right:-40px;top:-40px;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,.07)}
+  .dash-welcome-name{font-family:var(--font);font-size:1.4rem;font-weight:700;margin-bottom:6px}
+  .dash-welcome-sub{opacity:.75;font-size:.9rem}
+  .stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px}
+  .stat-card{background:#fff;border-radius:var(--radius);border:1px solid var(--border);padding:20px;transition:var(--transition)}
+  .stat-card:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+  .stat-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .stat-card-icon{width:42px;height:42px;border-radius:11px;display:grid;place-items:center}
+  .stat-card-icon svg{width:20px;height:20px}
+  .stat-card-num{font-family:var(--font);font-size:1.8rem;font-weight:800;line-height:1}
+  .stat-card-label{font-size:.8rem;color:var(--text-muted);margin-top:4px}
+  .stat-card-trend{font-size:.75rem;font-weight:600;color:var(--success)}
+  .recent-activity{background:#fff;border-radius:var(--radius);border:1px solid var(--border);padding:24px}
+  .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+  .section-header h3{font-family:var(--font);font-weight:700;font-size:1rem}
+  .activity-list{display:flex;flex-direction:column;gap:14px}
+  .activity-item{display:flex;align-items:center;gap:14px;padding:12px;border-radius:10px;transition:var(--transition)}
+  .activity-item:hover{background:var(--surface)}
+  .activity-icon{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;flex-shrink:0}
+  .activity-icon svg{width:18px;height:18px}
+  .activity-info{flex:1;min-width:0}
+  .activity-title{font-weight:600;font-size:.88rem}
+  .activity-time{font-size:.78rem;color:var(--text-muted);margin-top:2px}
+  .activity-badge{flex-shrink:0}
+
+  /* ── MY PACKAGES ─────────────────────────── */
+  .packages-grid{display:flex;flex-direction:column;gap:18px}
+  .pkg-card{background:#fff;border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;transition:var(--transition)}
+  .pkg-card:hover{box-shadow:var(--shadow)}
+  .pkg-card-header{padding:18px 20px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;border-bottom:1px solid var(--border)}
+  .pkg-id{font-family:var(--font);font-weight:700;font-size:.9rem;color:var(--brand)}
+  .pkg-date{font-size:.78rem;color:var(--text-muted);margin-top:3px}
+  .pkg-card-body{padding:18px 20px}
+  .pkg-route{display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap}
+  .pkg-route-loc{font-size:.88rem;font-weight:500}
+  .pkg-route-arrow{color:var(--text-muted);font-size:1rem}
+  .pkg-timeline{display:flex;align-items:center;gap:0;margin-bottom:18px}
+  .pkg-tl-step{flex:1;text-align:center;position:relative}
+  .pkg-tl-step:not(:last-child)::after{content:'';position:absolute;top:12px;left:50%;right:-50%;height:2px;background:var(--border);z-index:0}
+  .pkg-tl-step.done:not(:last-child)::after{background:var(--brand)}
+  .pkg-tl-dot{width:24px;height:24px;border-radius:50%;border:2.5px solid var(--border);background:#fff;margin:0 auto 6px;display:grid;place-items:center;position:relative;z-index:1;transition:var(--transition)}
+  .pkg-tl-step.done .pkg-tl-dot{border-color:var(--brand);background:var(--brand)}
+  .pkg-tl-step.done .pkg-tl-dot svg{fill:#fff}
+  .pkg-tl-dot svg{width:11px;height:11px;fill:var(--border)}
+  .pkg-tl-label{font-size:.7rem;color:var(--text-muted);font-weight:500}
+  .pkg-tl-step.done .pkg-tl-label{color:var(--brand);font-weight:600}
+  .pkg-proof{margin-top:14px}
+  .pkg-proof-title{font-size:.8rem;font-weight:600;color:var(--text-muted);margin-bottom:8px}
+  .pkg-proof-imgs{display:flex;gap:10px;flex-wrap:wrap}
+  .pkg-proof-img{width:70px;height:70px;border-radius:10px;object-fit:cover;border:1.5px solid var(--border);cursor:pointer;transition:var(--transition)}
+  .pkg-proof-img:hover{transform:scale(1.05)}
+  .pkg-proof-placeholder{width:70px;height:70px;border-radius:10px;background:var(--surface);border:1.5px dashed var(--border);display:grid;place-items:center;font-size:.65rem;color:var(--text-muted);text-align:center}
+  .no-packages{text-align:center;padding:60px 20px;color:var(--text-muted)}
+  .no-packages svg{width:60px;height:60px;fill:var(--border);margin:0 auto 16px;display:block}
+  .no-packages p{font-size:.9rem}
+
+  /* ── INQUIRY FORM ─────────────────────────── */
+  .inquiry-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .map-container{height:280px;border-radius:12px;border:1.5px solid var(--border);overflow:hidden;margin-top:8px}
+  .map-hint{font-size:.78rem;color:var(--text-muted);margin-top:6px}
+  .inquiry-submit-area{margin-top:24px;display:flex;justify-content:flex-end}
+  .inquiries-list{display:flex;flex-direction:column;gap:14px}
+  .inquiry-item{background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .inquiry-item-info h4{font-weight:600;font-size:.9rem;margin-bottom:4px}
+  .inquiry-item-info p{font-size:.82rem;color:var(--text-muted)}
+
+  /* ── PROFILE ─────────────────────────────── */
+  .profile-grid{display:grid;grid-template-columns:280px 1fr;gap:24px;align-items:start}
+  .profile-card{background:#fff;border-radius:var(--radius);border:1px solid var(--border);padding:28px;text-align:center}
+  .profile-avatar-big{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--brand),var(--brand-dark));display:grid;place-items:center;color:#fff;font-family:var(--font);font-weight:700;font-size:1.8rem;margin:0 auto 14px}
+  .profile-name{font-family:var(--font);font-weight:700;font-size:1.1rem;margin-bottom:4px}
+  .profile-email{font-size:.85rem;color:var(--text-muted);margin-bottom:18px}
+  .profile-stat-row{display:flex;justify-content:center;gap:24px}
+  .profile-stat{text-align:center}
+  .profile-stat-n{font-family:var(--font);font-weight:700;font-size:1.2rem;color:var(--brand)}
+  .profile-stat-l{font-size:.72rem;color:var(--text-muted)}
+  .profile-form{background:#fff;border-radius:var(--radius);border:1px solid var(--border);padding:28px}
+
+  /* ── DRIVER DASHBOARD ───────────────────── */
+  .driver-deliveries{display:flex;flex-direction:column;gap:16px}
+  .driver-pkg-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+  .driver-pkg-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .driver-pkg-body{padding:18px 20px}
+  .driver-pkg-route{font-size:.9rem;color:var(--text-muted);margin-bottom:16px}
+  .driver-pkg-route strong{color:var(--text)}
+  .upload-area{border:2px dashed var(--border);border-radius:12px;padding:24px;text-align:center;cursor:pointer;transition:var(--transition);background:var(--surface)}
+  .upload-area:hover{border-color:var(--brand);background:var(--brand-light)}
+  .upload-area svg{width:32px;height:32px;fill:var(--text-muted);margin:0 auto 8px;display:block;transition:var(--transition)}
+  .upload-area:hover svg{fill:var(--brand)}
+  .upload-area p{font-size:.85rem;color:var(--text-muted);transition:var(--transition)}
+  .upload-area:hover p{color:var(--brand)}
+  .upload-preview{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+  .upload-preview img{width:70px;height:70px;border-radius:8px;object-fit:cover;border:1.5px solid var(--border)}
+  .driver-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+  .status-btn{flex:1;min-width:120px;padding:10px;border-radius:10px;font-weight:600;font-size:.83rem;border:2px solid;transition:var(--transition);cursor:pointer;font-family:var(--font-body)}
+  .status-btn-pickup{border-color:var(--warning);color:var(--warning);background:#fff}
+  .status-btn-pickup:hover,.status-btn-pickup.active{background:var(--warning);color:#fff}
+  .status-btn-transit{border-color:var(--brand);color:var(--brand);background:#fff}
+  .status-btn-transit:hover,.status-btn-transit.active{background:var(--brand);color:#fff}
+  .status-btn-delivered{border-color:var(--success);color:var(--success);background:#fff}
+  .status-btn-delivered:hover,.status-btn-delivered.active{background:var(--success);color:#fff}
+
+  /* ── IMAGE LIGHTBOX ─────────────────────── */
+  .lightbox{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9998;display:flex;align-items:center;justify-content:center;padding:20px}
+  .lightbox img{max-width:90vw;max-height:85vh;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+  .lightbox-close{position:absolute;top:20px;right:20px;width:44px;height:44px;background:rgba(255,255,255,.15);border-radius:50%;display:grid;place-items:center;cursor:pointer;color:#fff;font-size:1.4rem;transition:var(--transition)}
+  .lightbox-close:hover{background:rgba(255,255,255,.25)}
+
+  /* ══════════════════════════════════════════
+     RESPONSIVE
+  ══════════════════════════════════════════ */
+  @media(max-width:1024px){
+    .hero-content{grid-template-columns:1fr;text-align:center;gap:40px}
+    .hero-text{order:1}.hero-visual{order:0}
+    .hero-p,.hero-btns{margin-left:auto;margin-right:auto}
+    .hero-btns{justify-content:center}
+    .hero-stats{justify-content:center}
+    .about-inner{grid-template-columns:1fr}
+    .about-visual{order:-1}
+    .footer-grid{grid-template-columns:1fr 1fr}
+    .inquiry-grid{grid-template-columns:1fr}
+    .profile-grid{grid-template-columns:1fr}
+  }
+  @media(max-width:768px){
+    .nav-links,.nav-cta{display:none}
+    .hamburger{display:flex}
+    .dash-main{margin-left:0}
+    .sidebar{transform:translateX(-100%)}
+    .sidebar.mobile-open{transform:translateX(0);box-shadow:var(--shadow-lg)}
+    .sidebar-toggle-btn{display:grid}
+    .dash-topbar{padding:0 16px}
+    .dash-body{padding:16px}
+    .form-row{grid-template-columns:1fr}
+    .footer-grid{grid-template-columns:1fr}
+    .about-mv{grid-template-columns:1fr}
+    .stats-row{grid-template-columns:1fr 1fr}
+    .auth-card{padding:28px 24px}
+  }
+  @media(max-width:480px){
+    .stats-row{grid-template-columns:1fr}
+    .hero-stats{flex-direction:column;gap:16px}
+  }
+</style>
+</head>
+<body>
+
+<!-- ══ TOAST CONTAINER ══ -->
+<div id="toast-container"></div>
+
+<!-- ══ LIGHTBOX ══ -->
+<div class="lightbox hidden" id="lightbox" onclick="closeLightbox()">
+  <div class="lightbox-close" onclick="closeLightbox()">✕</div>
+  <img id="lightbox-img" src="" alt="Proof image">
+</div>
+
+<!-- ══════════════════════════════════════════════
+     PAGE: HOME
+══════════════════════════════════════════════ -->
+<div id="page-home" class="page active">
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="nav-logo" onclick="showPage('home')">
+      <div class="nav-logo-icon"><svg viewBox="0 0 24 24"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zm-.5 1.5 1.96 2.5H17V9.5h2.5zM6 18c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm2.22-3c-.55-.61-1.35-1-2.22-1s-1.67.39-2.22 1H3V6h12v9H8.22zM18 18c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z"/></svg></div>
+      Lineage Enterprise
+    </div>
+    <ul class="nav-links">
+      <li><a href="#" class="active" onclick="showPublicSection(event,'home')">Home</a></li>
+      <li><a href="#" onclick="showPublicSection(event,'services')">Services</a></li>
+      <li><a href="#" onclick="showPublicSection(event,'about')">About Us</a></li>
+    </ul>
+    <div class="nav-cta">
+      <button class="btn btn-outline btn-sm" onclick="showPage('client-login')">Client Login</button>
+      <button class="btn btn-primary btn-sm" onclick="showPage('client-register')">Get Started</button>
+    </div>
+    <div class="hamburger" onclick="toggleMobileNav()">
+      <span></span><span></span><span></span>
+    </div>
+  </nav>
+  <div class="mobile-nav" id="mobile-nav">
+    <a href="#" onclick="showPublicSection(event,'home');toggleMobileNav()">Home</a>
+    <a href="#" onclick="showPublicSection(event,'services');toggleMobileNav()">Services</a>
+    <a href="#" onclick="showPublicSection(event,'about');toggleMobileNav()">About Us</a>
+    <a href="#" onclick="showPage('client-login')">Client Login</a>
+    <a href="#" onclick="showPage('client-register')">Create Account</a>
+    <a href="#" onclick="showPage('driver-login')">Driver Login</a>
+  </div>
+
+  <!-- HOME SECTION -->
+  <section id="section-home" class="public-section">
+    <!-- HERO -->
+    <section class="hero">
+      <div class="hero-bg">
+        <div class="hero-orb hero-orb-1"></div>
+        <div class="hero-orb hero-orb-2"></div>
+        <div class="hero-grid"></div>
+      </div>
+      <div class="hero-content">
+        <div class="hero-visual">
+          <div class="hero-phone-wrap">
+            <div class="floating-badge floating-badge-1">
+              <div class="fb-icon fb-icon-green"><svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:#00c47a"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+              <span>Package Delivered!</span>
+            </div>
+            <div class="hero-track-card">
+              <div class="htc-header">
+                <span class="htc-title">Live Tracking</span>
+                <span class="htc-live"><span class="htc-live-dot"></span>Live</span>
+              </div>
+              <div class="htc-track-num">Tracking: <strong>LNE-2025-00142</strong></div>
+              <div class="htc-steps">
+                <div class="htc-step done">
+                  <div class="htc-dot"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+                  <div class="htc-step-info"><div class="htc-step-label">Order Placed</div><div class="htc-step-time">Dec 15, 9:00 AM</div></div>
+                </div>
+                <div class="htc-step done">
+                  <div class="htc-dot"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+                  <div class="htc-step-info"><div class="htc-step-label">Package Picked Up</div><div class="htc-step-time">Dec 15, 11:30 AM</div></div>
+                </div>
+                <div class="htc-step done">
+                  <div class="htc-dot"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+                  <div class="htc-step-info"><div class="htc-step-label">In Transit</div><div class="htc-step-time">Dec 15, 1:00 PM</div></div>
+                </div>
+                <div class="htc-step">
+                  <div class="htc-dot"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg></div>
+                  <div class="htc-step-info"><div class="htc-step-label">Delivered</div><div class="htc-step-time">Pending</div></div>
+                </div>
+              </div>
+            </div>
+            <div class="floating-badge floating-badge-2">
+              <div class="fb-icon fb-icon-blue"><svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:var(--brand)"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4z"/></svg></div>
+              <div><div style="font-size:.72rem;color:var(--text-muted)">Today's Deliveries</div><div style="font-weight:700;color:var(--brand)">128 Completed</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="hero-text">
+          <div class="hero-eyebrow"><span class="hero-eyebrow-dot"></span>Trusted Delivery Partner</div>
+          <h1 class="hero-h1">Delivering with <span>Speed</span> & Precision</h1>
+          <p class="hero-p">Lineage Enterprise brings you reliable, fast, and secure package delivery solutions. Track your shipments in real-time and experience logistics done right.</p>
+          <div class="hero-btns">
+            <button class="btn btn-primary" onclick="showPage('client-register')">
+              <svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:#fff"><path d="M12 2l-5.5 9h11z"/><path d="M12 2l5.5 9H6.5z" style="opacity:.6"/></svg>
+              Start Shipping
+            </button>
+            <button class="btn btn-outline" onclick="showPublicSection(event,'services')">Explore Services</button>
+          </div>
+          <div class="hero-stats">
+            <div class="hero-stat"><div class="hero-stat-num">10K+</div><div class="hero-stat-label">Packages Delivered</div></div>
+            <div class="hero-stat"><div class="hero-stat-num">98%</div><div class="hero-stat-label">On-Time Rate</div></div>
+            <div class="hero-stat"><div class="hero-stat-num">150+</div><div class="hero-stat-label">Cities Served</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SERVICES PREVIEW -->
+    <section class="services-section">
+      <div class="services-inner">
+        <div class="services-header">
+          <span class="section-tag">What We Offer</span>
+          <h2 class="section-title">Our Delivery <span class="brand">Services</span></h2>
+          <p class="section-sub">Professional logistics solutions built for speed, reliability, and security at every step of the journey.</p>
+        </div>
+        <div class="services-grid">
+          <div class="service-card">
+            <div class="service-icon"><svg viewBox="0 0 24 24"><path d="M20.38 8.57l-1.23 1.85a8 8 0 0 1-.22 7.58H5.07A8 8 0 0 1 15.58 6.85l1.85-1.23A10 10 0 0 0 3.35 19a2 2 0 0 0 1.72 1h13.85a2 2 0 0 0 1.74-1 10 10 0 0 0-.27-10.44z"/><path d="M10.59 15.41a2 2 0 0 0 2.83 0l5.66-8.49-8.49 5.66a2 2 0 0 0 0 2.83z"/></svg></div>
+            <div class="service-title">Fast Delivery</div>
+            <div class="service-desc">Lightning-quick delivery service ensuring your packages reach their destination in record time without compromising safety.</div>
+          </div>
+          <div class="service-card">
+            <div class="service-icon"><svg viewBox="0 0 24 24"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4z"/></svg></div>
+            <div class="service-title">Reliable Transport</div>
+            <div class="service-desc">Our fleet of vetted vehicles ensures consistent, dependable transportation for every package, every time.</div>
+          </div>
+          <div class="service-card">
+            <div class="service-icon"><svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg></div>
+            <div class="service-title">Secure Handling</div>
+            <div class="service-desc">Every package is handled with maximum care. We ensure safe packaging, careful transit, and tamper-proof delivery.</div>
+          </div>
+          <div class="service-card">
+            <div class="service-icon"><svg viewBox="0 0 24 24"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg></div>
+            <div class="service-title">Efficient Logistics</div>
+            <div class="service-desc">Smart routing and real-time tracking systems optimize delivery paths for maximum efficiency and minimal delays.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta-section">
+      <div class="cta-inner">
+        <h2 class="cta-title">Ready to Ship with Lineage?</h2>
+        <p class="cta-sub">Join thousands of satisfied clients who trust Lineage Enterprise for their delivery needs.</p>
+        <div class="cta-btns">
+          <button class="btn btn-white" onclick="showPage('client-register')">Create Free Account</button>
+          <button class="btn btn-outline-white" onclick="showPublicSection(event,'about')">Learn More</button>
+        </div>
+      </div>
+    </section>
+  </section>
+
+  <!-- SERVICES SECTION -->
+  <section id="section-services" class="public-section hidden">
+    <section style="padding:80px 5% 60px;background:var(--surface)">
+      <div style="max-width:1200px;margin:0 auto;text-align:center">
+        <span class="section-tag">Services</span>
+        <h1 class="section-title">Our Delivery <span class="brand">Solutions</span></h1>
+        <p class="section-sub" style="margin:0 auto 60px">Everything you need for smooth, reliable package delivery—from first mile to last.</p>
+      </div>
+    </section>
+    <section class="services-section" style="padding-top:0">
+      <div class="services-inner">
+        <div class="services-grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">
+          <div class="service-card">
+            <div class="service-icon"><svg viewBox="0 0 24 24"><path d="M20.38 8.57l-1.23 1.85a8 8 0 0 1-.22 7.58H5.07A8 8 0 0 1 15.58 6.85l1.85-1.23A10 10 0 0 0 3.35 19a2 2 0 0 0 1.72 1h13.85a2 2 0 0 0 1.74-1 10 10 0 0 0-.27-10.44z"/></svg></div>
+            <div class="service-title">Fast Delivery</div>
+            <div class="service-desc">Same-day and next-day delivery options for urgent shipments. Our optimized routing ensures the fastest possible delivery windows for your packages.</div>
+          </div>
+          <div class="service-card">
+            <div class="service-icon"><svg viewBox="0 0 24 24"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4z"/></svg></div>
+            <div class="service-title">Reliable Transport</div>
+            <div class="service-desc">A maintained fleet of delivery vehicles operated by professional, background-checked drivers committed to on-time performance every single delivery.</div>
+          </div>
+          <div class="service-card">
+            <div class="service-icon"><svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg></div>
+            <div class="service-title">Secure Package Handling</div>
+            <div class="service-desc">Industry-grade packaging standards, sealed handling processes, and proof-of-delivery photos ensure your packages arrive intact and verified.</div>
+          </div>
+          <div class="service-card">
+            <div class="service-icon"><svg viewBox="0 0 24 24"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg></div>
+            <div class="service-title">Efficient Logistics</div>
+            <div class="service-desc">Smart dispatch systems, real-time GPS tracking, and digital proof-of-delivery streamline operations so you always know where your package is.</div>
+          </div>
+        </div>
+        <div style="margin-top:60px;background:linear-gradient(135deg,var(--brand),var(--brand-dark));border-radius:24px;padding:48px;text-align:center;color:#fff">
+          <h2 style="font-family:var(--font);font-size:2rem;font-weight:800;margin-bottom:12px;letter-spacing:-.03em">Start Your Delivery Today</h2>
+          <p style="opacity:.8;margin-bottom:28px;font-size:1rem">Create an account and submit your first delivery inquiry in minutes.</p>
+          <button class="btn btn-white" onclick="showPage('client-register')">Get Started — It's Free</button>
+        </div>
+      </div>
+    </section>
+    <footer style="background:var(--text);color:rgba(255,255,255,.7);padding:30px 5%;text-align:center;font-size:.85rem">
+      <p>© 2025 Lineage Enterprise. All rights reserved.</p>
+    </footer>
+  </section>
+
+  <!-- ABOUT SECTION -->
+  <section id="section-about" class="public-section hidden">
+    <section style="padding:80px 5% 0;background:var(--surface)">
+      <div style="max-width:1200px;margin:0 auto;text-align:center;padding-bottom:60px">
+        <span class="section-tag">About Us</span>
+        <h1 class="section-title">Built on <span class="brand">Trust</span> & Reliability</h1>
+        <p class="section-sub" style="margin:0 auto">Lineage Enterprise is a modern delivery company committed to transforming the logistics experience.</p>
+      </div>
+    </section>
+    <section class="about-section">
+      <div class="about-inner">
+        <div class="about-visual">
+          <div class="about-img-wrap">
+            <div class="about-img-pattern"></div>
+            <div class="about-img-icon"><svg viewBox="0 0 24 24"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zm-.5 1.5 1.96 2.5H17V9.5h2.5zM6 18c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm2.22-3c-.55-.61-1.35-1-2.22-1s-1.67.39-2.22 1H3V6h12v9H8.22zM18 18c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z"/></svg></div>
+          </div>
+          <div class="about-badge-float">
+            <div class="about-badge-float-num">5+ Yrs</div>
+            <div class="about-badge-float-label">In Operation</div>
+          </div>
+        </div>
+        <div>
+          <span class="section-tag">Our Story</span>
+          <h2 class="section-title" style="font-size:clamp(1.8rem,3vw,2.5rem)">A Modern Approach to Delivery</h2>
+          <p style="color:var(--text-muted);line-height:1.8;margin-bottom:16px;font-size:.95rem">Lineage Enterprise was founded with a singular mission: to make delivery simple, transparent, and reliable for every client. We leverage modern technology, real-time tracking, and a dedicated team to redefine what logistics can be.</p>
+          <p style="color:var(--text-muted);line-height:1.8;margin-bottom:24px;font-size:.95rem">From small packages to large freight, we handle every shipment with the same level of care and precision. Our clients trust us because we deliver—not just packages, but promises.</p>
+          <div class="about-mv">
+            <div class="mv-card">
+              <div class="mv-card-tag">Our Mission</div>
+              <div class="mv-card-text">To provide fast, secure, and efficient delivery services that empower businesses and individuals with peace of mind.</div>
+            </div>
+            <div class="mv-card">
+              <div class="mv-card-tag">Our Vision</div>
+              <div class="mv-card-text">To become the most trusted logistics partner in the region, setting the standard for modern delivery excellence.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section style="padding:80px 5%;background:#fff">
+      <div style="max-width:1200px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:24px;text-align:center">
+        <div class="card" style="padding:32px">
+          <div style="font-family:var(--font);font-size:2.5rem;font-weight:800;color:var(--brand);margin-bottom:8px">10K+</div>
+          <div style="font-weight:600;margin-bottom:6px">Packages Delivered</div>
+          <div style="font-size:.85rem;color:var(--text-muted)">Successfully completed deliveries nationwide</div>
+        </div>
+        <div class="card" style="padding:32px">
+          <div style="font-family:var(--font);font-size:2.5rem;font-weight:800;color:var(--brand);margin-bottom:8px">98%</div>
+          <div style="font-weight:600;margin-bottom:6px">On-Time Delivery</div>
+          <div style="font-size:.85rem;color:var(--text-muted)">Industry-leading punctuality record</div>
+        </div>
+        <div class="card" style="padding:32px">
+          <div style="font-family:var(--font);font-size:2.5rem;font-weight:800;color:var(--brand);margin-bottom:8px">150+</div>
+          <div style="font-weight:600;margin-bottom:6px">Cities Served</div>
+          <div style="font-size:.85rem;color:var(--text-muted)">Wide coverage across the region</div>
+        </div>
+        <div class="card" style="padding:32px">
+          <div style="font-family:var(--font);font-size:2.5rem;font-weight:800;color:var(--brand);margin-bottom:8px">5K+</div>
+          <div style="font-weight:600;margin-bottom:6px">Happy Clients</div>
+          <div style="font-size:.85rem;color:var(--text-muted)">Businesses and individuals we serve</div>
+        </div>
+      </div>
+    </section>
+    <footer style="background:var(--text);color:rgba(255,255,255,.7);padding:30px 5%;text-align:center;font-size:.85rem">
+      <p>© 2025 Lineage Enterprise. All rights reserved.</p>
+    </footer>
+  </section>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     PAGE: CLIENT LOGIN
+══════════════════════════════════════════════ -->
+<div id="page-client-login" class="page">
+  <div class="auth-page">
+    <div class="auth-bg-orb auth-bg-orb-1"></div>
+    <div class="auth-bg-orb auth-bg-orb-2"></div>
+    <div class="auth-card">
+      <div class="auth-logo">
+        <div class="auth-logo-icon"><svg viewBox="0 0 24 24"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4z"/></svg></div>
+        Lineage Enterprise
+      </div>
+      <h1 class="auth-title">Welcome back</h1>
+      <p class="auth-sub">Sign in to your client account to manage deliveries.</p>
+      <div class="form-group">
+        <label class="form-label">Email Address</label>
+        <input type="email" class="form-input" id="cl-email" placeholder="you@example.com">
+        <div class="form-error" id="cl-email-err">Please enter a valid email.</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" class="form-input" id="cl-pass" placeholder="••••••••">
+        <div class="form-error" id="cl-pass-err">Password is required.</div>
+      </div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:8px" onclick="clientLogin()">Sign In</button>
+      <div class="auth-divider">or</div>
+      <p class="auth-footer-text">Don't have an account? <a href="#" onclick="showPage('client-register')">Create one</a></p>
+      <p class="auth-footer-text" style="margin-top:8px"><a href="#" onclick="showPage('home')" style="color:var(--text-muted)">← Back to Home</a></p>
+      <div class="auth-divider" style="margin-top:20px"></div>
+      <p class="auth-footer-text">Driver? <a href="#" onclick="showPage('driver-login')">Driver Login →</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     PAGE: CLIENT REGISTER
+══════════════════════════════════════════════ -->
+<div id="page-client-register" class="page">
+  <div class="auth-page">
+    <div class="auth-bg-orb auth-bg-orb-1"></div>
+    <div class="auth-bg-orb auth-bg-orb-2"></div>
+    <div class="auth-card">
+      <div class="auth-logo">
+        <div class="auth-logo-icon"><svg viewBox="0 0 24 24"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4z"/></svg></div>
+        Lineage Enterprise
+      </div>
+      <h1 class="auth-title">Create Account</h1>
+      <p class="auth-sub">Join Lineage and start shipping today.</p>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">First Name</label>
+          <input type="text" class="form-input" id="reg-fname" placeholder="Juan">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Last Name</label>
+          <input type="text" class="form-input" id="reg-lname" placeholder="Dela Cruz">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email Address</label>
+        <input type="email" class="form-input" id="reg-email" placeholder="you@example.com">
+        <div class="form-error" id="reg-email-err">Please enter a valid email.</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Contact Number</label>
+        <input type="tel" class="form-input" id="reg-phone" placeholder="+63 9XX XXX XXXX">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" class="form-input" id="reg-pass" placeholder="Min. 8 characters">
+        <div class="form-error" id="reg-pass-err">Password must be at least 8 characters.</div>
+      </div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:8px" onclick="clientRegister()">Create Account</button>
+      <p class="auth-footer-text" style="margin-top:16px">Already have an account? <a href="#" onclick="showPage('client-login')">Sign in</a></p>
+      <p class="auth-footer-text" style="margin-top:8px"><a href="#" onclick="showPage('home')" style="color:var(--text-muted)">← Back to Home</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     PAGE: DRIVER LOGIN
+══════════════════════════════════════════════ -->
+<div id="page-driver-login" class="page">
+  <div class="auth-page">
+    <div class="auth-bg-orb auth-bg-orb-1"></div>
+    <div class="auth-bg-orb auth-bg-orb-2"></div>
+    <div class="auth-card">
+      <div class="auth-logo">
+        <div class="auth-logo-icon"><svg viewBox="0 0 24 24"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4z"/></svg></div>
+        Lineage Enterprise
+      </div>
+      <div class="driver-badge">
+        <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:#856404;flex-shrink:0"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+        Driver Portal — Accounts created by admin only.
+      </div>
+      <h1 class="auth-title">Driver Sign In</h1>
+      <p class="auth-sub">Access your assigned deliveries and update statuses.</p>
+      <div class="form-group">
+        <label class="form-label">Driver ID / Email</label>
+        <input type="text" class="form-input" id="dr-email" placeholder="driver@lineage.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" class="form-input" id="dr-pass" placeholder="••••••••">
+      </div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:8px" onclick="driverLogin()">Sign In as Driver</button>
+      <p class="auth-footer-text" style="margin-top:16px"><a href="#" onclick="showPage('client-login')" style="color:var(--text-muted)">← Client Login</a></p>
+      <p class="auth-footer-text" style="margin-top:8px"><a href="#" onclick="showPage('home')" style="color:var(--text-muted)">← Back to Home</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     PAGE: CLIENT DASHBOARD
+══════════════════════════════════════════════ -->
+<div id="page-client-dash" class="page">
+  <div class="dash-layout">
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="client-sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <div class="sidebar-logo-icon"><svg viewBox="0 0 24 24"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4z"/></svg></div>
+          Lineage
+        </div>
+      </div>
+      <div class="sidebar-user">
+        <div class="sidebar-avatar" id="c-avatar">JD</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name" id="c-name">Juan Dela Cruz</div>
+          <div class="sidebar-user-role">Client Account</div>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="sidebar-section-label">Main Menu</div>
+        <a class="sidebar-link active" onclick="showDashSection('c-home',this)">
+          <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>Dashboard
+        </a>
+        <a class="sidebar-link" onclick="showDashSection('c-packages',this)">
+          <svg viewBox="0 0 24 24"><path d="M20 6h-2.18c.07-.44.18-.88.18-1.34C18 2.09 15.88 0 13.33 0c-1.45 0-2.73.66-3.6 1.7L12 3.4l2.27-1.71C14.73 1.26 15.24 1 15.75 1 16.99 1 18 2.01 18 3.25c0 1.33-1.01 2.41-2.34 2.75H8.34C7.01 5.66 6 4.58 6 3.25 6 2.01 7.01 1 8.25 1c.51 0 1.02.26 1.48.69L12 3.4 13.27 1.7C12.4.66 11.12 0 9.67 0 7.12 0 5 2.09 5 4.66c0 .46.11.9.18 1.34H3c-1.1 0-2 .9-2 2v13c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z"/></svg>My Packages
+        </a>
+        <a class="sidebar-link" onclick="showDashSection('c-inquiry',this)">
+          <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>Delivery Inquiry
+        </a>
+        <div class="sidebar-section-label" style="margin-top:16px">Account</div>
+        <a class="sidebar-link" onclick="showDashSection('c-profile',this)">
+          <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>Profile
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center" onclick="logout()">
+          <svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:currentColor"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
+          Sign Out
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="dash-main">
+      <div class="dash-topbar">
+        <div style="display:flex;align-items:center;gap:12px">
+          <button class="sidebar-toggle-btn" onclick="toggleSidebar('client-sidebar')"><svg viewBox="0 0 24 24"><path fill="var(--text)" d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg></button>
+          <span class="dash-topbar-title" id="c-dash-title">Dashboard</span>
+        </div>
+        <div class="dash-topbar-right">
+          <div class="notif-btn"><svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg><div class="notif-dot"></div></div>
+        </div>
+      </div>
+
+      <div class="dash-body">
+        <!-- DASHBOARD HOME -->
+        <div class="dash-section active" id="c-home">
+          <div class="dash-welcome">
+            <div class="dash-welcome-name" id="c-welcome-name">Good morning, Juan! 👋</div>
+            <div class="dash-welcome-sub">Here's an overview of your deliveries today.</div>
+          </div>
+          <div class="stats-row">
+            <div class="stat-card">
+              <div class="stat-card-top">
+                <div class="stat-card-icon" style="background:var(--brand-light)"><svg viewBox="0 0 24 24" style="fill:var(--brand)"><path d="M20 6h-2.18c.07-.44.18-.88.18-1.34C18 2.09 15.88 0 13.33 0c-1.45 0-2.73.66-3.6 1.7L12 3.4l2.27-1.71C14.73 1.26 15.24 1 15.75 1 16.99 1 18 2.01 18 3.25c0 1.33-1.01 2.41-2.34 2.75H8.34C7.01 5.66 6 4.58 6 3.25 6 2.01 7.01 1 8.25 1c.51 0 1.02.26 1.48.69L12 3.4 13.27 1.7C12.4.66 11.12 0 9.67 0 7.12 0 5 2.09 5 4.66c0 .46.11.9.18 1.34H3c-1.1 0-2 .9-2 2v13c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z"/></svg></div>
+                <span class="stat-card-trend">+2 new</span>
+              </div>
+              <div class="stat-card-num" id="stat-total">3</div>
+              <div class="stat-card-label">Total Packages</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-top">
+                <div class="stat-card-icon" style="background:#fff3cd"><svg viewBox="0 0 24 24" style="fill:#856404"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg></div>
+                <span></span>
+              </div>
+              <div class="stat-card-num" id="stat-pending">1</div>
+              <div class="stat-card-label">Pending</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-top">
+                <div class="stat-card-icon" style="background:#cff4fc"><svg viewBox="0 0 24 24" style="fill:#055160"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4z"/></svg></div>
+                <span></span>
+              </div>
+              <div class="stat-card-num" id="stat-transit">1</div>
+              <div class="stat-card-label">In Transit</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-top">
+                <div class="stat-card-icon" style="background:#d1fae5"><svg viewBox="0 0 24 24" style="fill:#065f46"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+                <span class="stat-card-trend">98% rate</span>
+              </div>
+              <div class="stat-card-num" id="stat-delivered">1</div>
+              <div class="stat-card-label">Delivered</div>
+            </div>
+          </div>
+          <div class="recent-activity">
+            <div class="section-header">
+              <h3>Recent Activity</h3>
+              <button class="btn btn-ghost btn-sm" onclick="showDashSection('c-packages',document.querySelector('.sidebar-link:nth-child(2)'))">View All</button>
+            </div>
+            <div class="activity-list" id="c-activity-list">
+              <!-- populated by JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- MY PACKAGES -->
+        <div class="dash-section" id="c-packages">
+          <div class="section-header" style="margin-bottom:20px">
+            <h2 style="font-family:var(--font);font-weight:700;font-size:1.2rem">My Packages</h2>
+            <button class="btn btn-primary btn-sm" onclick="showDashSection('c-inquiry',document.querySelectorAll('.sidebar-link')[2])">+ New Inquiry</button>
+          </div>
+          <div class="packages-grid" id="c-packages-grid">
+            <!-- populated by JS -->
+          </div>
+        </div>
+
+        <!-- DELIVERY INQUIRY -->
+        <div class="dash-section" id="c-inquiry">
+          <h2 style="font-family:var(--font);font-weight:700;font-size:1.2rem;margin-bottom:6px">Delivery Inquiry</h2>
+          <p style="color:var(--text-muted);font-size:.88rem;margin-bottom:24px">Fill in the form below to submit a new delivery request.</p>
+          <div class="inquiry-grid">
+            <div class="card">
+              <h3 style="font-family:var(--font);font-weight:700;font-size:1rem;margin-bottom:20px">Inquiry Details</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Client Name</label>
+                  <input type="text" class="form-input" id="inq-name" placeholder="Full name">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Contact Number</label>
+                  <input type="tel" class="form-input" id="inq-phone" placeholder="+63 9XX...">
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <input type="email" class="form-input" id="inq-email" placeholder="you@example.com">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Pickup Location</label>
+                <input type="text" class="form-input" id="inq-pickup" placeholder="Enter pickup address">
+                <div class="map-hint">📍 Click on the map to pin pickup location</div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Destination</label>
+                <input type="text" class="form-input" id="inq-dest" placeholder="Enter destination address">
+                <div class="map-hint">📍 Click map again to pin destination</div>
+              </div>
+              <div class="inquiry-submit-area">
+                <button class="btn btn-primary" onclick="submitInquiry()">Submit Inquiry</button>
+              </div>
+            </div>
+            <div class="card">
+              <h3 style="font-family:var(--font);font-weight:700;font-size:1rem;margin-bottom:12px">Select Locations on Map</h3>
+              <p style="font-size:.8rem;color:var(--text-muted);margin-bottom:12px">Click once for pickup, twice for destination.</p>
+              <div class="map-container" id="inquiry-map"></div>
+              <div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap">
+                <div style="display:flex;align-items:center;gap:6px;font-size:.8rem;color:var(--text-muted)">
+                  <div style="width:12px;height:12px;background:var(--brand);border-radius:50%"></div>Pickup
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;font-size:.8rem;color:var(--text-muted)">
+                  <div style="width:12px;height:12px;background:var(--success);border-radius:50%"></div>Destination
+                </div>
+              </div>
+              <div style="margin-top:20px">
+                <h4 style="font-size:.88rem;font-weight:700;margin-bottom:12px">Previous Inquiries</h4>
+                <div class="inquiries-list" id="c-inquiries-list">
+                  <!-- populated by JS -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PROFILE -->
+        <div class="dash-section" id="c-profile">
+          <h2 style="font-family:var(--font);font-weight:700;font-size:1.2rem;margin-bottom:24px">My Profile</h2>
+          <div class="profile-grid">
+            <div class="profile-card">
+              <div class="profile-avatar-big" id="c-profile-avatar">JD</div>
+              <div class="profile-name" id="c-profile-name">Juan Dela Cruz</div>
+              <div class="profile-email" id="c-profile-email">juan@example.com</div>
+              <div class="profile-stat-row">
+                <div class="profile-stat"><div class="profile-stat-n" id="ps-total">3</div><div class="profile-stat-l">Total</div></div>
+                <div class="profile-stat"><div class="profile-stat-n" id="ps-delivered">1</div><div class="profile-stat-l">Delivered</div></div>
+                <div class="profile-stat"><div class="profile-stat-n" id="ps-pending">2</div><div class="profile-stat-l">Active</div></div>
+              </div>
+            </div>
+            <div class="profile-form">
+              <h3 style="font-family:var(--font);font-weight:700;font-size:1rem;margin-bottom:20px">Edit Information</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">First Name</label>
+                  <input type="text" class="form-input" id="pf-fname">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Last Name</label>
+                  <input type="text" class="form-input" id="pf-lname">
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <input type="email" class="form-input" id="pf-email">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Contact Number</label>
+                <input type="tel" class="form-input" id="pf-phone">
+              </div>
+              <button class="btn btn-primary btn-sm" onclick="saveProfile()">Save Changes</button>
+              <div style="margin-top:28px;padding-top:20px;border-top:1px solid var(--border)">
+                <h3 style="font-family:var(--font);font-weight:700;font-size:1rem;margin-bottom:16px">Change Password</h3>
+                <div class="form-group">
+                  <label class="form-label">Current Password</label>
+                  <input type="password" class="form-input" placeholder="••••••••">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">New Password</label>
+                  <input type="password" class="form-input" placeholder="Min. 8 characters">
+                </div>
+                <button class="btn btn-outline btn-sm" onclick="showToast('Password updated successfully!','success')">Update Password</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     PAGE: DRIVER DASHBOARD
+══════════════════════════════════════════════ -->
+<div id="page-driver-dash" class="page">
+  <div class="dash-layout">
+    <aside class="sidebar" id="driver-sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <div class="sidebar-logo-icon"><svg viewBox="0 0 24 24"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4z"/></svg></div>
+          Lineage
+        </div>
+      </div>
+      <div class="sidebar-user">
+        <div class="sidebar-avatar" style="background:linear-gradient(135deg,#f59e0b,#d97706)">DR</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name" id="d-name">Driver Reyes</div>
+          <div class="sidebar-user-role" style="color:var(--warning)">Driver Account</div>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="sidebar-section-label">Deliveries</div>
+        <a class="sidebar-link active" onclick="showDriverSection('d-home',this)">
+          <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>Dashboard
+        </a>
+        <a class="sidebar-link" onclick="showDriverSection('d-assigned',this)">
+          <svg viewBox="0 0 24 24"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4z"/></svg>Assigned Deliveries
+        </a>
+        <a class="sidebar-link" onclick="showDriverSection('d-upload',this)">
+          <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>Upload Updates
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center" onclick="logout()">
+          <svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:currentColor"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
+          Sign Out
+        </button>
+      </div>
+    </aside>
+
+    <main class="dash-main">
+      <div class="dash-topbar">
+        <div style="display:flex;align-items:center;gap:12px">
+          <button class="sidebar-toggle-btn" onclick="toggleSidebar('driver-sidebar')"><svg viewBox="0 0 24 24"><path fill="var(--text)" d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg></button>
+          <span class="dash-topbar-title" id="d-dash-title">Driver Dashboard</span>
+        </div>
+        <div class="dash-topbar-right">
+          <span class="badge badge-transit">On Duty</span>
+        </div>
+      </div>
+
+      <div class="dash-body">
+        <!-- DRIVER HOME -->
+        <div class="dash-section active" id="d-home">
+          <div class="dash-welcome" style="background:linear-gradient(135deg,#f59e0b,#d97706)">
+            <div class="dash-welcome-name">Good morning, Driver Reyes! 🚚</div>
+            <div class="dash-welcome-sub">You have <strong id="d-assigned-count">2</strong> active deliveries today.</div>
+          </div>
+          <div class="stats-row">
+            <div class="stat-card">
+              <div class="stat-card-top"><div class="stat-card-icon" style="background:#fff3cd"><svg viewBox="0 0 24 24" style="fill:#856404"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4z"/></svg></div></div>
+              <div class="stat-card-num">2</div>
+              <div class="stat-card-label">Assigned Today</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-top"><div class="stat-card-icon" style="background:#cff4fc"><svg viewBox="0 0 24 24" style="fill:#055160"><path d="M20.38 8.57l-1.23 1.85a8 8 0 0 1-.22 7.58H5.07A8 8 0 0 1 15.58 6.85l1.85-1.23A10 10 0 0 0 3.35 19a2 2 0 0 0 1.72 1h13.85a2 2 0 0 0 1.74-1 10 10 0 0 0-.27-10.44z"/></svg></div></div>
+              <div class="stat-card-num">1</div>
+              <div class="stat-card-label">In Transit</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-top"><div class="stat-card-icon" style="background:#d1fae5"><svg viewBox="0 0 24 24" style="fill:#065f46"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div></div>
+              <div class="stat-card-num" id="d-delivered-count">8</div>
+              <div class="stat-card-label">Delivered This Week</div>
+            </div>
+          </div>
+          <div class="card">
+            <h3 style="font-family:var(--font);font-weight:700;font-size:1rem;margin-bottom:16px">Quick Actions</h3>
+            <div style="display:flex;gap:12px;flex-wrap:wrap">
+              <button class="btn btn-primary btn-sm" onclick="showDriverSection('d-assigned',document.querySelectorAll('#driver-sidebar .sidebar-link')[1])">View Assigned Deliveries</button>
+              <button class="btn btn-outline btn-sm" onclick="showDriverSection('d-upload',document.querySelectorAll('#driver-sidebar .sidebar-link')[2])">Upload Proof Image</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ASSIGNED DELIVERIES -->
+        <div class="dash-section" id="d-assigned">
+          <h2 style="font-family:var(--font);font-weight:700;font-size:1.2rem;margin-bottom:20px">Assigned Deliveries</h2>
+          <div class="driver-deliveries" id="driver-deliveries-list">
+            <!-- populated by JS -->
+          </div>
+        </div>
+
+        <!-- UPLOAD UPDATES -->
+        <div class="dash-section" id="d-upload">
+          <h2 style="font-family:var(--font);font-weight:700;font-size:1.2rem;margin-bottom:6px">Upload Delivery Updates</h2>
+          <p style="color:var(--text-muted);font-size:.88rem;margin-bottom:24px">Select a package and upload proof images to update its status.</p>
+          <div class="card" style="max-width:600px">
+            <div class="form-group">
+              <label class="form-label">Select Package</label>
+              <select class="form-input form-select" id="upload-pkg-select">
+                <!-- populated by JS -->
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Update Type</label>
+              <select class="form-input form-select" id="upload-type">
+                <option value="pickup">Package Pickup Proof</option>
+                <option value="delivery">Delivery Completion Proof</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Upload Image</label>
+              <div class="upload-area" onclick="triggerUpload()">
+                <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
+                <p><strong>Click to upload</strong> or drag and drop</p>
+                <p style="font-size:.75rem;margin-top:4px">PNG, JPG, JPEG up to 10MB</p>
+              </div>
+              <input type="file" id="upload-file-input" accept="image/*" style="display:none" onchange="handleFileUpload(this)">
+              <div class="upload-preview" id="upload-preview"></div>
+            </div>
+            <button class="btn btn-primary" onclick="submitProof()">Submit Update</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════
+let state = {
+  currentUser: null,
+  userType: null, // 'client' | 'driver'
+  clients: [
+    { id: 1, firstName: 'Juan', lastName: 'Dela Cruz', email: 'juan@example.com', phone: '+63 912 345 6789', password: 'password123' }
+  ],
+  packages: [
+    { id: 'LNE-2025-001', clientId: 1, pickup: 'Quezon City, Metro Manila', dest: 'Makati City, Metro Manila', status: 'delivered', date: 'Dec 14, 2025', pickupProof: null, deliveryProof: null, timeline: ['Dec 14 9:00 AM','Dec 14 11:00 AM','Dec 14 1:00 PM','Dec 14 4:30 PM'] },
+    { id: 'LNE-2025-002', clientId: 1, pickup: 'Pasig City, Metro Manila', dest: 'Taguig City, Metro Manila', status: 'transit', date: 'Dec 15, 2025', pickupProof: null, deliveryProof: null, timeline: ['Dec 15 8:00 AM','Dec 15 10:30 AM','Dec 15 12:00 PM',null] },
+    { id: 'LNE-2025-003', clientId: 1, pickup: 'Mandaluyong City', dest: 'Parañaque City', status: 'pending', date: 'Dec 15, 2025', pickupProof: null, deliveryProof: null, timeline: ['Dec 15 2:00 PM',null,null,null] },
+  ],
+  inquiries: [
+    { id: 'INQ-001', name: 'Juan Dela Cruz', email: 'juan@example.com', phone: '+63 912 345 6789', pickup: 'Quezon City', dest: 'Makati City', date: 'Dec 13, 2025' }
+  ],
+  drivers: [
+    { id: 1, name: 'Driver Reyes', email: 'reyes@lineage.com', password: 'driver123' }
+  ],
+  uploadedFile: null,
+  mapPickupMarker: null,
+  mapDestMarker: null,
+  mapClickState: 0, // 0=pickup, 1=dest
+  leafletMap: null,
+};
+
+// ══════════════════════════════════════════════
+//  PAGE NAVIGATION
+// ══════════════════════════════════════════════
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  window.scrollTo(0,0);
+  // close mobile nav
+  document.getElementById('mobile-nav').classList.remove('open');
+  // Init map if inquiry section
+  if(id === 'client-dash') {
+    setTimeout(initMap, 300);
+    renderClientDash();
+  }
+  if(id === 'driver-dash') {
+    renderDriverDash();
+  }
+}
+
+function showPublicSection(e, id) {
+  if(e) e.preventDefault();
+  document.querySelectorAll('.public-section').forEach(s => s.classList.add('hidden'));
+  document.getElementById('section-' + id).classList.remove('hidden');
+  // update nav links
+  document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
+  const map = {home:0, services:1, about:2};
+  const links = document.querySelectorAll('.nav-links a');
+  if(links[map[id]]) links[map[id]].classList.add('active');
+  window.scrollTo(0,0);
+}
+
+function toggleMobileNav() {
+  document.getElementById('mobile-nav').classList.toggle('open');
+}
+
+// ══════════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════════
+function showToast(msg, type='info') {
+  const icons = {
+    success: `<svg viewBox="0 0 24 24" style="fill:var(--success)"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>`,
+    error: `<svg viewBox="0 0 24 24" style="fill:var(--danger)"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>`,
+    info: `<svg viewBox="0 0 24 24" style="fill:var(--brand)"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>`
+  };
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<div class="toast-icon">${icons[type]||icons.info}</div><span>${msg}</span>`;
+  document.getElementById('toast-container').appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+// ══════════════════════════════════════════════
+//  LIGHTBOX
+// ══════════════════════════════════════════════
+function openLightbox(src) {
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox').classList.remove('hidden');
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.add('hidden');
+}
+
+// ══════════════════════════════════════════════
+//  AUTH
+// ══════════════════════════════════════════════
+function clientLogin() {
+  const email = document.getElementById('cl-email').value.trim();
+  const pass = document.getElementById('cl-pass').value;
+  let valid = true;
+  if(!email.includes('@')) { showErr('cl-email','cl-email-err'); valid=false; } else hideErr('cl-email','cl-email-err');
+  if(!pass) { showErr('cl-pass','cl-pass-err'); valid=false; } else hideErr('cl-pass','cl-pass-err');
+  if(!valid) return;
+  const client = state.clients.find(c => c.email===email && c.password===pass);
+  if(!client) { showToast('Invalid email or password.','error'); return; }
+  state.currentUser = client;
+  state.userType = 'client';
+  showToast(`Welcome back, ${client.firstName}!`, 'success');
+  setTimeout(() => showPage('client-dash'), 400);
+}
+
+function clientRegister() {
+  const fname = document.getElementById('reg-fname').value.trim();
+  const lname = document.getElementById('reg-lname').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const phone = document.getElementById('reg-phone').value.trim();
+  const pass = document.getElementById('reg-pass').value;
+  if(!fname||!lname||!email||!pass) { showToast('Please fill all required fields.','error'); return; }
+  if(!email.includes('@')) { showErr('reg-email','reg-email-err'); return; } else hideErr('reg-email','reg-email-err');
+  if(pass.length < 8) { showErr('reg-pass','reg-pass-err'); return; } else hideErr('reg-pass','reg-pass-err');
+  if(state.clients.find(c=>c.email===email)) { showToast('Email already registered.','error'); return; }
+  const newClient = { id: Date.now(), firstName: fname, lastName: lname, email, phone, password: pass };
+  state.clients.push(newClient);
+  state.currentUser = newClient;
+  state.userType = 'client';
+  showToast('Account created successfully!', 'success');
+  setTimeout(() => showPage('client-dash'), 400);
+}
+
+function driverLogin() {
+  const email = document.getElementById('dr-email').value.trim();
+  const pass = document.getElementById('dr-pass').value;
+  const driver = state.drivers.find(d => d.email===email && d.password===pass);
+  if(!driver) { showToast('Invalid credentials. Contact admin.','error'); return; }
+  state.currentUser = driver;
+  state.userType = 'driver';
+  showToast('Welcome, ' + driver.name + '!', 'success');
+  setTimeout(() => showPage('driver-dash'), 400);
+}
+
+function logout() {
+  state.currentUser = null;
+  state.userType = null;
+  showToast('Signed out successfully.', 'info');
+  showPage('home');
+}
+
+function showErr(inputId, errId) {
+  document.getElementById(inputId).classList.add('error');
+  document.getElementById(errId).classList.add('show');
+}
+function hideErr(inputId, errId) {
+  document.getElementById(inputId).classList.remove('error');
+  document.getElementById(errId).classList.remove('show');
+}
+
+// ══════════════════════════════════════════════
+//  SIDEBAR
+// ══════════════════════════════════════════════
+function toggleSidebar(id) {
+  document.getElementById(id).classList.toggle('mobile-open');
+}
+function showDashSection(id, el) {
+  document.querySelectorAll('#page-client-dash .dash-section').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('#client-sidebar .sidebar-link').forEach(l => l.classList.remove('active'));
+  if(el) el.classList.add('active');
+  const titles = {'c-home':'Dashboard','c-packages':'My Packages','c-inquiry':'Delivery Inquiry','c-profile':'Profile'};
+  document.getElementById('c-dash-title').textContent = titles[id] || id;
+  document.getElementById('client-sidebar').classList.remove('mobile-open');
+  if(id==='c-inquiry') setTimeout(initMap,300);
+}
+function showDriverSection(id, el) {
+  document.querySelectorAll('#page-driver-dash .dash-section').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('#driver-sidebar .sidebar-link').forEach(l => l.classList.remove('active'));
+  if(el) el.classList.add('active');
+  const titles = {'d-home':'Driver Dashboard','d-assigned':'Assigned Deliveries','d-upload':'Upload Updates'};
+  document.getElementById('d-dash-title').textContent = titles[id] || id;
+  document.getElementById('driver-sidebar').classList.remove('mobile-open');
+}
+
+// ══════════════════════════════════════════════
+//  CLIENT DASHBOARD RENDER
+// ══════════════════════════════════════════════
+function renderClientDash() {
+  if(!state.currentUser) return;
+  const u = state.currentUser;
+  const initials = (u.firstName[0]+u.lastName[0]).toUpperCase();
+  document.getElementById('c-avatar').textContent = initials;
+  document.getElementById('c-name').textContent = u.firstName + ' ' + u.lastName;
+  document.getElementById('c-welcome-name').textContent = `Good morning, ${u.firstName}! 👋`;
+  document.getElementById('c-profile-avatar').textContent = initials;
+  document.getElementById('c-profile-name').textContent = u.firstName + ' ' + u.lastName;
+  document.getElementById('c-profile-email').textContent = u.email;
+  document.getElementById('pf-fname').value = u.firstName;
+  document.getElementById('pf-lname').value = u.lastName;
+  document.getElementById('pf-email').value = u.email;
+  document.getElementById('pf-phone').value = u.phone||'';
+  document.getElementById('inq-name').value = u.firstName + ' ' + u.lastName;
+  document.getElementById('inq-email').value = u.email;
+  document.getElementById('inq-phone').value = u.phone||'';
+
+  const pkgs = state.packages.filter(p=>p.clientId===u.id);
+  const delivered = pkgs.filter(p=>p.status==='delivered').length;
+  const pending = pkgs.filter(p=>p.status==='pending').length;
+  const transit = pkgs.filter(p=>p.status==='transit').length;
+
+  document.getElementById('stat-total').textContent = pkgs.length;
+  document.getElementById('stat-pending').textContent = pending;
+  document.getElementById('stat-transit').textContent = transit;
+  document.getElementById('stat-delivered').textContent = delivered;
+  document.getElementById('ps-total').textContent = pkgs.length;
+  document.getElementById('ps-delivered').textContent = delivered;
+  document.getElementById('ps-pending').textContent = pending+transit;
+
+  renderActivity(pkgs);
+  renderPackages(pkgs);
+  renderInquiries();
+  populateUploadSelect(pkgs);
+}
+
+function renderActivity(pkgs) {
+  const list = document.getElementById('c-activity-list');
+  const statusInfo = {
+    pending: {label:'Order Placed',color:'#fff3cd',iconColor:'#856404'},
+    transit: {label:'In Transit',color:'#cff4fc',iconColor:'#055160'},
+    pickup: {label:'Picked Up',color:'#d1ecf1',iconColor:'#0c5460'},
+    delivered: {label:'Delivered',color:'#d1fae5',iconColor:'#065f46'}
+  };
+  list.innerHTML = pkgs.slice().reverse().map(p=>{
+    const s = statusInfo[p.status]||statusInfo.pending;
+    return `<div class="activity-item">
+      <div class="activity-icon" style="background:${s.color}">
+        <svg viewBox="0 0 24 24" style="fill:${s.iconColor}"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4z"/></svg>
+      </div>
+      <div class="activity-info">
+        <div class="activity-title">${p.id}</div>
+        <div class="activity-time">${p.pickup} → ${p.dest} • ${p.date}</div>
+      </div>
+      <div class="activity-badge">${badgeHtml(p.status)}</div>
+    </div>`;
+  }).join('');
+}
+
+function badgeHtml(status) {
+  const map = {pending:'badge-pending',transit:'badge-transit',pickup:'badge-pickup',delivered:'badge-delivered'};
+  const label = {pending:'Pending',transit:'In Transit',pickup:'Picked Up',delivered:'Delivered'};
+  return `<span class="badge ${map[status]||'badge-pending'}">${label[status]||status}</span>`;
+}
+
+function renderPackages(pkgs) {
+  const grid = document.getElementById('c-packages-grid');
+  if(!pkgs.length) {
+    grid.innerHTML = `<div class="no-packages"><svg viewBox="0 0 24 24"><path d="M20 6h-2.18c.07-.44.18-.88.18-1.34C18 2.09 15.88 0 13.33 0c-1.45 0-2.73.66-3.6 1.7L12 3.4l2.27-1.71C14.73 1.26 15.24 1 15.75 1 16.99 1 18 2.01 18 3.25c0 1.33-1.01 2.41-2.34 2.75H8.34C7.01 5.66 6 4.58 6 3.25 6 2.01 7.01 1 8.25 1c.51 0 1.02.26 1.48.69L12 3.4 13.27 1.7C12.4.66 11.12 0 9.67 0 7.12 0 5 2.09 5 4.66c0 .46.11.9.18 1.34H3c-1.1 0-2 .9-2 2v13c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z"/></svg><p>No packages yet. Submit a delivery inquiry to get started.</p></div>`;
+    return;
+  }
+  const steps = ['Pending','Picked Up','In Transit','Delivered'];
+  const statusStep = {pending:0,pickup:1,transit:2,delivered:3};
+  grid.innerHTML = pkgs.map(p=>{
+    const step = statusStep[p.status]||0;
+    const tlHtml = steps.map((s,i)=>`
+      <div class="pkg-tl-step ${i<=step?'done':''}">
+        <div class="pkg-tl-dot"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+        <div class="pkg-tl-label">${s}</div>
+      </div>`).join('');
+    const proofHtml = (p.pickupProof||p.deliveryProof) ? `
+      <div class="pkg-proof">
+        <div class="pkg-proof-title">Proof Images</div>
+        <div class="pkg-proof-imgs">
+          ${p.pickupProof ? `<img src="${p.pickupProof}" class="pkg-proof-img" onclick="openLightbox('${p.pickupProof}')" title="Pickup Proof">` : ''}
+          ${p.deliveryProof ? `<img src="${p.deliveryProof}" class="pkg-proof-img" onclick="openLightbox('${p.deliveryProof}')" title="Delivery Proof">` : ''}
+        </div>
+      </div>` : `<div class="pkg-proof"><div class="pkg-proof-title">Proof Images</div><div class="pkg-proof-imgs"><div class="pkg-proof-placeholder">Awaiting<br>Pickup</div></div></div>`;
+    return `<div class="pkg-card">
+      <div class="pkg-card-header">
+        <div><div class="pkg-id">${p.id}</div><div class="pkg-date">${p.date}</div></div>
+        ${badgeHtml(p.status)}
+      </div>
+      <div class="pkg-card-body">
+        <div class="pkg-route">
+          <span class="pkg-route-loc">📦 ${p.pickup}</span>
+          <span class="pkg-route-arrow">→</span>
+          <span class="pkg-route-loc">🏁 ${p.dest}</span>
+        </div>
+        <div class="pkg-timeline">${tlHtml}</div>
+        ${proofHtml}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderInquiries() {
+  const list = document.getElementById('c-inquiries-list');
+  const myInqs = state.inquiries.filter(i=>i.email===(state.currentUser?.email));
+  if(!myInqs.length) { list.innerHTML = '<p style="font-size:.83rem;color:var(--text-muted)">No inquiries yet.</p>'; return; }
+  list.innerHTML = myInqs.map(i=>`
+    <div class="inquiry-item">
+      <div class="inquiry-item-info">
+        <h4>${i.id}</h4>
+        <p>${i.pickup} → ${i.dest} • ${i.date}</p>
+      </div>
+      <span class="badge badge-pending">Pending</span>
+    </div>`).join('');
+}
+
+// ══════════════════════════════════════════════
+//  MAP
+// ══════════════════════════════════════════════
+function initMap() {
+  const el = document.getElementById('inquiry-map');
+  if(!el || state.leafletMap) return;
+  try {
+    const map = L.map('inquiry-map').setView([14.5995, 120.9842], 11);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+    let pickupMarker=null, destMarker=null;
+    const pickupIcon = L.divIcon({html:`<div style="width:14px;height:14px;background:var(--brand);border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,79,249,.4)"></div>`,iconSize:[14,14],iconAnchor:[7,7],className:''});
+    const destIcon = L.divIcon({html:`<div style="width:14px;height:14px;background:#00c47a;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,196,122,.4)"></div>`,iconSize:[14,14],iconAnchor:[7,7],className:''});
+    map.on('click', e=>{
+      if(state.mapClickState===0) {
+        if(pickupMarker) map.removeLayer(pickupMarker);
+        pickupMarker = L.marker(e.latlng, {icon:pickupIcon}).addTo(map).bindPopup('Pickup Location').openPopup();
+        document.getElementById('inq-pickup').value = `${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`;
+        state.mapClickState = 1;
+      } else {
+        if(destMarker) map.removeLayer(destMarker);
+        destMarker = L.marker(e.latlng, {icon:destIcon}).addTo(map).bindPopup('Destination').openPopup();
+        document.getElementById('inq-dest').value = `${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`;
+        state.mapClickState = 0;
+      }
+    });
+    state.leafletMap = map;
+  } catch(e) { el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:.85rem">Map not available</div>'; }
+}
+
+// ══════════════════════════════════════════════
+//  INQUIRY SUBMIT
+// ══════════════════════════════════════════════
+function submitInquiry() {
+  const name = document.getElementById('inq-name').value.trim();
+  const email = document.getElementById('inq-email').value.trim();
+  const phone = document.getElementById('inq-phone').value.trim();
+  const pickup = document.getElementById('inq-pickup').value.trim();
+  const dest = document.getElementById('inq-dest').value.trim();
+  if(!name||!email||!pickup||!dest) { showToast('Please fill all required fields.','error'); return; }
+  const inq = { id: 'INQ-' + String(state.inquiries.length+1).padStart(3,'0'), name, email, phone, pickup, dest, date: new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) };
+  state.inquiries.push(inq);
+  // Add a new package
+  const pkg = { id: 'LNE-2025-' + String(state.packages.length+1).padStart(3,'0'), clientId: state.currentUser.id, pickup, dest, status: 'pending', date: inq.date, pickupProof:null, deliveryProof:null, timeline:[inq.date+' (submitted)',null,null,null] };
+  state.packages.push(pkg);
+  showToast('Inquiry submitted! Package created: ' + pkg.id, 'success');
+  document.getElementById('inq-pickup').value='';
+  document.getElementById('inq-dest').value='';
+  renderInquiries();
+  renderClientDash();
+}
+
+// ══════════════════════════════════════════════
+//  PROFILE SAVE
+// ══════════════════════════════════════════════
+function saveProfile() {
+  const fn = document.getElementById('pf-fname').value.trim();
+  const ln = document.getElementById('pf-lname').value.trim();
+  const em = document.getElementById('pf-email').value.trim();
+  const ph = document.getElementById('pf-phone').value.trim();
+  if(!fn||!ln||!em) { showToast('Please fill all required fields.','error'); return; }
+  state.currentUser.firstName = fn;
+  state.currentUser.lastName = ln;
+  state.currentUser.email = em;
+  state.currentUser.phone = ph;
+  renderClientDash();
+  showToast('Profile updated successfully!','success');
+}
+
+// ══════════════════════════════════════════════
+//  DRIVER DASHBOARD RENDER
+// ══════════════════════════════════════════════
+function renderDriverDash() {
+  const pkgs = state.packages;
+  document.getElementById('d-assigned-count').textContent = pkgs.filter(p=>p.status!=='delivered').length;
+  renderDriverDeliveries(pkgs);
+  populateUploadSelect(pkgs);
+}
+
+function renderDriverDeliveries(pkgs) {
+  const list = document.getElementById('driver-deliveries-list');
+  list.innerHTML = pkgs.map(p=>{
+    const step = {pending:'status-btn-pickup',pickup:'status-btn-transit',transit:'status-btn-delivered',delivered:''}[p.status]||'';
+    return `<div class="driver-pkg-card">
+      <div class="driver-pkg-header">
+        <div>
+          <div style="font-family:var(--font);font-weight:700;font-size:.9rem;color:var(--brand)">${p.id}</div>
+          <div style="font-size:.78rem;color:var(--text-muted);margin-top:2px">${p.date}</div>
+        </div>
+        ${badgeHtml(p.status)}
+      </div>
+      <div class="driver-pkg-body">
+        <div class="driver-pkg-route"><strong>From:</strong> ${p.pickup}<br><strong>To:</strong> ${p.dest}</div>
+        ${p.pickupProof ? `<div style="margin-bottom:12px"><div style="font-size:.8rem;font-weight:600;color:var(--text-muted);margin-bottom:6px">Pickup Proof</div><img src="${p.pickupProof}" style="width:70px;height:70px;border-radius:8px;object-fit:cover;border:1.5px solid var(--border);cursor:pointer" onclick="openLightbox('${p.pickupProof}')"></div>` : ''}
+        ${p.deliveryProof ? `<div style="margin-bottom:12px"><div style="font-size:.8rem;font-weight:600;color:var(--text-muted);margin-bottom:6px">Delivery Proof</div><img src="${p.deliveryProof}" style="width:70px;height:70px;border-radius:8px;object-fit:cover;border:1.5px solid var(--border);cursor:pointer" onclick="openLightbox('${p.deliveryProof}')"></div>` : ''}
+        <div class="driver-actions">
+          <button class="status-btn status-btn-pickup ${p.status==='pickup'?'active':''}" onclick="updateStatus('${p.id}','pickup')">📦 Picked Up</button>
+          <button class="status-btn status-btn-transit ${p.status==='transit'?'active':''}" onclick="updateStatus('${p.id}','transit')">🚚 In Transit</button>
+          <button class="status-btn status-btn-delivered ${p.status==='delivered'?'active':''}" onclick="updateStatus('${p.id}','delivered')">✅ Delivered</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function updateStatus(pkgId, status) {
+  const pkg = state.packages.find(p=>p.id===pkgId);
+  if(!pkg) return;
+  pkg.status = status;
+  const label = {pickup:'Picked Up',transit:'In Transit',delivered:'Delivered'};
+  showToast(`${pkgId} status updated to "${label[status]}"!`, 'success');
+  renderDriverDeliveries(state.packages);
+}
+
+// ══════════════════════════════════════════════
+//  FILE UPLOAD
+// ══════════════════════════════════════════════
+function triggerUpload() {
+  document.getElementById('upload-file-input').click();
+}
+
+function handleFileUpload(input) {
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    state.uploadedFile = e.target.result;
+    const prev = document.getElementById('upload-preview');
+    prev.innerHTML = `<img src="${e.target.result}" style="width:70px;height:70px;border-radius:8px;object-fit:cover;border:1.5px solid var(--border)">`;
+  };
+  reader.readAsDataURL(file);
+}
+
+function populateUploadSelect(pkgs) {
+  const sel = document.getElementById('upload-pkg-select');
+  if(!sel) return;
+  sel.innerHTML = pkgs.map(p=>`<option value="${p.id}">${p.id} – ${p.pickup} → ${p.dest}</option>`).join('');
+}
+
+function submitProof() {
+  const pkgId = document.getElementById('upload-pkg-select').value;
+  const type = document.getElementById('upload-type').value;
+  const pkg = state.packages.find(p=>p.id===pkgId);
+  if(!pkg) { showToast('Package not found.','error'); return; }
+  if(!state.uploadedFile) { showToast('Please upload an image first.','error'); return; }
+  if(type==='pickup') {
+    pkg.pickupProof = state.uploadedFile;
+    pkg.status = 'pickup';
+    showToast(`Pickup proof uploaded! ${pkgId} marked as "Picked Up".`, 'success');
+  } else {
+    pkg.deliveryProof = state.uploadedFile;
+    pkg.status = 'delivered';
+    showToast(`Delivery proof uploaded! ${pkgId} marked as "Delivered".`, 'success');
+  }
+  state.uploadedFile = null;
+  document.getElementById('upload-preview').innerHTML = '';
+  document.getElementById('upload-file-input').value = '';
+  renderDriverDeliveries(state.packages);
+  // Also refresh client dashboard stats silently
+  const statTotal = document.getElementById('stat-total');
+  if(statTotal) renderClientDash();
+}
+
+// ══════════════════════════════════════════════
+//  DEMO: Pre-fill for quick testing
+// ══════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  // Gentle animation on service cards
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach((e,i) => {
+      if(e.isIntersecting) {
+        e.target.style.animationDelay = (i*0.1)+'s';
+        e.target.style.animation = 'fadeUp 0.5s ease both';
+      }
+    });
+  }, {threshold:0.1});
+  document.querySelectorAll('.service-card, .stat-card').forEach(el => observer.observe(el));
+});
+</script>
+</body>
+</html>
