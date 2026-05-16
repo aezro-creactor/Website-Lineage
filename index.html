@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 <style>
   :root {
     --blue: #004FF9;
@@ -1340,6 +1341,15 @@
     border-radius: var(--radius-sm); padding: 0.65rem 0.9rem; font-size: 0.82rem;
     color: #c53030; margin-bottom: 1rem; font-weight: 500; }
   .auth-error.show { display: block; }
+  .password-wrapper { position: relative; }
+  .password-wrapper input { padding-right: 2.75rem; }
+  .pw-toggle {
+    position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%);
+    background: none; border: none; cursor: pointer; color: var(--gray-400);
+    display: flex; align-items: center; justify-content: center;
+    padding: 4px; transition: color var(--transition);
+  }
+  .pw-toggle:hover { color: var(--blue); }
 
   /* ── DASHBOARD ── */
   #page-dashboard { background: var(--gray-50); min-height: 100vh; }
@@ -1552,13 +1562,23 @@
       </div>
       <div class="form-group">
         <label>Password <span class="req">*</span></label>
-        <input type="password" id="auth-password" placeholder="••••••••"/>
+        <div class="password-wrapper">
+          <input type="password" id="auth-password" placeholder="••••••••"/>
+          <button type="button" class="pw-toggle" onclick="togglePw('auth-password',this)" tabindex="-1" aria-label="Show/hide password">
+            <svg id="eye-auth-password" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
       </div>
 
       <div id="signup-confirm-field" style="display:none;">
         <div class="form-group">
           <label>Confirm Password <span class="req">*</span></label>
-          <input type="password" id="auth-confirm" placeholder="••••••••"/>
+          <div class="password-wrapper">
+            <input type="password" id="auth-confirm" placeholder="••••••••"/>
+            <button type="button" class="pw-toggle" onclick="togglePw('auth-confirm',this)" tabindex="-1" aria-label="Show/hide password">
+              <svg id="eye-auth-confirm" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -2581,6 +2601,59 @@
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0ZW50ZG5zbndka3pycmlocXZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4MzA4NjAsImV4cCI6MjA5NDQwNjg2MH0.T2Aprtf3MHo-cyoTpJvv6jdbllBreggNIXXcSJ6Huds';
   const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+  // ── EMAILJS INIT ──
+  // Replace these with your actual EmailJS public key, service ID, and template ID
+  // Sign up free at https://www.emailjs.com — takes ~5 minutes
+  const EMAILJS_PUBLIC_KEY   = 'YOUR_EMAILJS_PUBLIC_KEY';   // e.g. 'abc123XYZ'
+  const EMAILJS_SERVICE_ID   = 'YOUR_EMAILJS_SERVICE_ID';   // e.g. 'service_xxxxxx'
+  const EMAILJS_TEMPLATE_ID  = 'YOUR_EMAILJS_TEMPLATE_ID';  // e.g. 'template_xxxxxx'
+  if (EMAILJS_PUBLIC_KEY !== 'YOUR_EMAILJS_PUBLIC_KEY') {
+    emailjs.init(EMAILJS_PUBLIC_KEY);
+  }
+
+  // ── PASSWORD SHOW/HIDE TOGGLE ──
+  function togglePw(inputId, btn) {
+    const input = document.getElementById(inputId);
+    const eyeIcon = btn.querySelector('svg');
+    if (!input) return;
+    if (input.type === 'password') {
+      input.type = 'text';
+      // Switch to eye-off icon
+      eyeIcon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>';
+    } else {
+      input.type = 'password';
+      // Switch back to eye icon
+      eyeIcon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+    }
+  }
+
+  // ── CONFIRMATION EMAIL ──
+  async function sendConfirmationEmail(toEmail, toName, inquiryDetails) {
+    // Guard: only attempt if EmailJS is configured
+    if (EMAILJS_PUBLIC_KEY === 'YOUR_EMAILJS_PUBLIC_KEY') {
+      console.info('[Lineage] EmailJS not configured — skipping confirmation email. Set EMAILJS_PUBLIC_KEY, SERVICE_ID, TEMPLATE_ID to enable.');
+      return;
+    }
+    try {
+      await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+        to_name:       toName,
+        to_email:      toEmail,
+        ref_id:        inquiryDetails.refId,
+        package_type:  inquiryDetails.packageType,
+        quantity:      inquiryDetails.quantity,
+        pickup:        inquiryDetails.pickup,
+        destination:   inquiryDetails.destination,
+        preferred_date: inquiryDetails.preferredDate || 'Not specified',
+        special_notes: inquiryDetails.specialNotes || 'None',
+        submit_date:   new Date().toLocaleDateString('en-PH', { year:'numeric', month:'long', day:'numeric' })
+      });
+      console.info('[Lineage] Confirmation email sent to', toEmail);
+    } catch (err) {
+      // Non-critical — don't block the user flow
+      console.warn('[Lineage] Could not send confirmation email:', err);
+    }
+  }
+
   // ── AUTH STATE ──
   let currentUser = null;
 
@@ -2605,6 +2678,11 @@
       currentUser = null;
       document.getElementById('nav-login-item').style.display = '';
       document.getElementById('nav-user-item').style.display = 'none';
+      // Clear form fields so the next user doesn't see stale data
+      const nameEl = document.getElementById('d-clientName');
+      const emailEl = document.getElementById('d-emailAddr');
+      if (nameEl) nameEl.value = '';
+      if (emailEl) emailEl.value = '';
     }
   });
 
@@ -2639,6 +2717,10 @@
     document.getElementById('auth-email').value = '';
     document.getElementById('auth-password').value = '';
     document.getElementById('auth-error').classList.remove('show');
+    // Reset button state in case it was left disabled
+    const btn = document.getElementById('auth-submit-btn');
+    btn.disabled = false;
+    btn.style.opacity = '';
     switchAuthTab('signin');
   }
   function closeLogin() { document.getElementById('loginModal').classList.remove('show'); }
@@ -2675,55 +2757,62 @@
     btn.style.opacity = '0.7';
     errEl.classList.remove('show');
 
-    if (isSignup) {
-      const name = document.getElementById('auth-name').value.trim();
-      const confirm = document.getElementById('auth-confirm').value;
-      if (!name) { errEl.textContent = 'Please enter your full name.'; errEl.classList.add('show'); btn.disabled=false; btn.style.opacity=''; return; }
-      if (password.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; errEl.classList.add('show'); btn.disabled=false; btn.style.opacity=''; return; }
-      if (password !== confirm) { errEl.textContent = 'Passwords do not match.'; errEl.classList.add('show'); btn.disabled=false; btn.style.opacity=''; return; }
+    try {
+      if (isSignup) {
+        const name = document.getElementById('auth-name').value.trim();
+        const confirm = document.getElementById('auth-confirm').value;
+        if (!name) { errEl.textContent = 'Please enter your full name.'; errEl.classList.add('show'); btn.disabled=false; btn.style.opacity=''; return; }
+        if (password.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; errEl.classList.add('show'); btn.disabled=false; btn.style.opacity=''; return; }
+        if (password !== confirm) { errEl.textContent = 'Passwords do not match.'; errEl.classList.add('show'); btn.disabled=false; btn.style.opacity=''; return; }
 
-      const { data, error } = await _supabase.auth.signUp({
-        email, password,
-        options: {
-          data: { full_name: name },
-          emailRedirectTo: window.location.href.split('#')[0]
-        }
-      });
-      btn.disabled=false; btn.style.opacity='';
-      if (error) { errEl.textContent = error.message; errEl.classList.add('show'); return; }
+        const { data, error } = await _supabase.auth.signUp({
+          email, password,
+          options: {
+            data: { full_name: name },
+            emailRedirectTo: window.location.href.split('#')[0]
+          }
+        });
+        btn.disabled=false; btn.style.opacity='';
+        if (error) { errEl.textContent = error.message; errEl.classList.add('show'); return; }
 
-      // If session exists immediately → email confirmation is OFF, log them in now
-      if (data.session) {
-        const displayName = data.user.user_metadata?.full_name || name;
-        loginSuccess(displayName, email, data.user.id, data.user.created_at, true);
-      } else {
-        // Email confirmation is ON → tell user to check their inbox
-        errEl.style.background = '#f0fff4';
-        errEl.style.borderColor = '#9ae6b4';
-        errEl.style.color = '#276749';
-        errEl.textContent = '✅ Account created! Please check your email to confirm your account, then sign in.';
-        errEl.classList.add('show');
-        // Switch to sign-in tab so they can log in after confirming
-        setTimeout(() => switchAuthTab('signin'), 2500);
-      }
-    } else {
-      const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
-      btn.disabled=false; btn.style.opacity='';
-      if (error) {
-        if (error.message.toLowerCase().includes('email not confirmed')) {
-          errEl.textContent = 'Please confirm your email first. Check your inbox for a confirmation link.';
-        } else if (error.message.toLowerCase().includes('invalid login')) {
-          errEl.textContent = 'Incorrect email or password.';
+        // If session exists immediately → email confirmation is OFF, log them in now
+        if (data.session) {
+          const displayName = data.user.user_metadata?.full_name || name;
+          loginSuccess(displayName, email, data.user.id, data.user.created_at, true);
         } else {
-          errEl.textContent = error.message;
+          // Email confirmation is ON → tell user to check their inbox
+          errEl.style.background = '#f0fff4';
+          errEl.style.borderColor = '#9ae6b4';
+          errEl.style.color = '#276749';
+          errEl.textContent = '✅ Account created! Please check your email to confirm your account, then sign in.';
+          errEl.classList.add('show');
+          setTimeout(() => switchAuthTab('signin'), 2500);
         }
-        errEl.style.background = '';
-        errEl.style.borderColor = '';
-        errEl.style.color = '';
-        errEl.classList.add('show');
-        return;
+      } else {
+        const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
+        btn.disabled=false; btn.style.opacity='';
+        if (error) {
+          if (error.message.toLowerCase().includes('email not confirmed')) {
+            errEl.textContent = 'Please confirm your email first. Check your inbox for a confirmation link.';
+          } else if (error.message.toLowerCase().includes('invalid login')) {
+            errEl.textContent = 'Incorrect email or password.';
+          } else {
+            errEl.textContent = error.message;
+          }
+          errEl.style.background = '';
+          errEl.style.borderColor = '';
+          errEl.style.color = '';
+          errEl.classList.add('show');
+          return;
+        }
+        // onAuthStateChange → loginSuccess automatically on SIGNED_IN
       }
-      // onAuthStateChange → loginSuccess automatically on SIGNED_IN
+    } catch (err) {
+      // Safety net — always re-enable button
+      btn.disabled = false;
+      btn.style.opacity = '';
+      errEl.textContent = 'An unexpected error occurred. Please try again.';
+      errEl.classList.add('show');
     }
   }
 
@@ -2760,7 +2849,8 @@
 
     closeLogin();
     if (redirect) showPage('dashboard');
-    setTimeout(() => { prefillDashInquiryForm(); renderDashboard(); }, 100);
+    // Always force-overwrite form fields with current user (fix for stale data from previous session)
+    setTimeout(() => { forcePrefillDashInquiryForm(); renderDashboard(); }, 100);
   }
 
   async function logoutUser() {
@@ -3097,14 +3187,17 @@
     document.getElementById('d-distance-card').style.display = 'none';
   }
 
-  // Pre-fill name/email from logged in user
-  function prefillDashInquiryForm() {
+  // Pre-fill name/email from logged in user — ALWAYS overwrites to prevent stale data from previous session
+  function forcePrefillDashInquiryForm() {
     if (!currentUser) return;
     const nameEl = document.getElementById('d-clientName');
     const emailEl = document.getElementById('d-emailAddr');
-    if (nameEl && !nameEl.value) nameEl.value = currentUser.name || '';
-    if (emailEl && !emailEl.value) emailEl.value = currentUser.email || '';
+    if (nameEl) nameEl.value = currentUser.name || '';
+    if (emailEl) emailEl.value = currentUser.email || '';
   }
+
+  // Legacy alias kept for any other callers
+  function prefillDashInquiryForm() { forcePrefillDashInquiryForm(); }
 
   document.getElementById('dashInquiryForm').addEventListener('submit', async function(e) {
     e.preventDefault();
@@ -3165,8 +3258,26 @@
       return;
     }
 
+    // Send confirmation email (non-blocking)
+    const refId = 'LNE-' + (Date.now().toString(16).toUpperCase());
+    sendConfirmationEmail(
+      document.getElementById('d-emailAddr').value.trim(),
+      document.getElementById('d-clientName').value.trim(),
+      {
+        refId,
+        packageType:   document.getElementById('d-pkgType').value,
+        quantity:      document.getElementById('d-quantity').value || '1',
+        pickup:        document.getElementById('d-pickupText').value.trim(),
+        destination:   document.getElementById('d-destText').value.trim(),
+        preferredDate: document.getElementById('d-pickupDate').value || null,
+        specialNotes:  document.getElementById('d-specialNotes').value.trim() || null
+      }
+    );
+
     document.getElementById('successOverlay').classList.add('show');
     document.getElementById('dashInquiryForm').reset();
+    // Re-fill the logged-in user's name/email after form reset
+    forcePrefillDashInquiryForm();
     clearDashMapPins();
     document.getElementById('d-pickup-display').innerHTML = '<strong>📍 Pick-up</strong>Not pinned yet';
     document.getElementById('d-dest-display').innerHTML = '<strong>🏁 Destination</strong>Not pinned yet';
